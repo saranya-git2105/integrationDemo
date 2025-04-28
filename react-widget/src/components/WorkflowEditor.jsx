@@ -1,0 +1,1995 @@
+import React, { useState, useCallback, useEffect, useMemo } from "react";
+import ReactFlow, {
+  addEdge,
+  Controls,
+  MiniMap,
+  Background,
+  useNodesState,
+  useEdgesState,
+  MarkerType, useReactFlow, EdgeLabelRenderer,
+} from "reactflow";
+import { ControlButton } from "reactflow";
+import { FaLock, FaUnlock } from "react-icons/fa";
+import "reactflow/dist/style.css";
+import Modal from "react-modal";
+import CustomNode from "./CustomNode";
+import CustomSmoothEdge from "./CustomSmoothEdge";
+//import CustomEdge from './CustomEdge';
+import { generate_styled_edges, layoutTopDownCustom } from "../utils/layout";
+import Select from "react-select";
+import { FiEye, FiDownload, FiRotateCw, FiPlusCircle, FiFolder, FiSave, FiRotateCcw, FiRefreshCw } from "react-icons/fi";
+import CanvasControls from "./CanvasControls"; // adjust path as needed
+
+Modal.setAppElement(document.body);
+const nodeWidth = 150;
+const nodeHeight = 60;
+
+const WorkflowEditor = ({ config = { nodeTypes: {}, buttons: {} }, apiUrls = {} }) => {
+  config = typeof config === "string" ? JSON.parse(config) : config;
+  apiUrls = typeof apiUrls === "string" ? JSON.parse(apiUrls) : apiUrls;
+  const { setViewport } = useReactFlow();
+  const [history, setHistory] = useState([{ nodes: [], edges: [] }]);
+  const [undoStack, setUndoStack] = useState([]);
+  const [redoStack, setRedoStack] = useState([]);
+  const [nodes, setNodes, onNodesChange] = useNodesState([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const [modalIsOpen, setModalIsOpen] = useState(false);
+  const [modalIsOpen1, setModalIsOpen1] = useState(false);
+  const [jsonData, setJsonData] = useState("");
+  const [contextMenu, setContextMenu] = useState(null);
+  const [selectedEdge, setSelectedEdge] = useState(null);
+  const [selectedNode, setSelectedNode] = useState(null);
+  const [nodeProperties, setNodeProperties] = useState({});
+  const nodeTypes = useMemo(() => ({
+    custom: (nodeProps) => <CustomNode {...nodeProps} isConnectable={true} />,
+  }), []);
+  const [nodeContextMenu, setNodeContextMenu] = useState(null);
+  const [isLocked, setIsLocked] = useState(false);
+  const [lockedToast, setLockedToast] = useState(false);
+  const [allWorkflows, setAllWorkflows] = useState([]);
+  const [selectedWorkflowOption, setSelectedWorkflowOption] = useState(null);
+  const [stepActionsOptions, setStepActionsOptions] = useState([]);
+  const [commonActionsOptions, setCommonActionsOptions] = useState([]);
+  const [workflowMeta, setWorkflowMeta] = useState({
+    name: "",
+    description: "",
+    dateEffective: new Date().toISOString(),
+  });
+  const [loadedWorkflowMeta, setLoadedWorkflowMeta] = useState(null);
+  const [metaModalOpen, setMetaModalOpen] = useState(false);
+  const [pendingAction, setPendingAction] = useState(null);
+  const [loadWorkflowModalOpen, setLoadWorkflowModalOpen] = useState(false);
+  const [selectedWorkflowToLoad, setSelectedWorkflowToLoad] = useState(null);
+  const [hoveredEdgeId, setHoveredEdgeId] = useState(null);
+  const [selectedElements, setSelectedElements] = useState([]);
+  const [hoveredNodeId, setHoveredNodeId] = useState(null);
+  let hoverTimeout;
+  const reactFlowInstance = useReactFlow();
+  const [backgroundVariant, setBackgroundVariant] = useState("dots"); // 'dots', 'lines', 'cross', or 'solid'
+  const [edgeStyle, setEdgeStyle] = useState("customSmooth");
+  const edgeTypes = useMemo(() => ({
+    customSmooth: CustomSmoothEdge,
+  }), []);
+  const [nodeMenuPosition, setNodeMenuPosition] = useState({ x: 0, y: 0 });
+  const [isDraggingNodeMenu, setIsDraggingNodeMenu] = useState(false);
+  const [edgeMenuPosition, setEdgeMenuPosition] = useState({ x: 0, y: 0 });
+  const [isDraggingEdgeMenu, setIsDraggingEdgeMenu] = useState(false);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const sidebarNodeTypes = useMemo(() => (
+    [
+      { label: "Start", color: "#9fda7c", shape: "circle" },
+      { label: "Stop", color: "#FFB7B4", shape: "circle" },
+      { label: "Step", color: "#82d6f7", shape: "rect" },
+      { label: "Decision", color: "#B388EB", shape: "diamond" },
+    ].filter(({ label }) => config?.nodeTypes?.[label] !== false)
+  ), [config]);
+
+  const sidebarButtons = useMemo(() => (
+    [
+      { key: "create", icon: <FiPlusCircle />, label: "Create Workflow", action: () => handleActionWithMeta("create"), color: "#9B85E0" },
+      { key: "view", icon: <FiEye />, label: "View JSON", action: () => handleActionWithMeta("view"), color: "#3b82f6" },
+      { key: "load", label: "Load Workflow", icon: <FiFolder />, action: () => setLoadWorkflowModalOpen(true), color: "#DF9600" },
+      { key: "save", label: "Save Workflow", icon: <FiSave />, action: () => handleActionWithMeta("save"), color: "#4B49AC" },
+      { key: "download", label: "Download JSON", icon: <FiDownload />, action: () => handleActionWithMeta("download"), color: "#00D25B" },
+    ].filter(({ key }) => config?.buttons?.[key] !== false)
+  ), [config, handleCreateWorkflowClick, handleActionWithMeta]);
+
+  const {
+    getActions = "",
+    getWorkflows = "",
+    saveWorkflow = "",
+    loadWorkflow = ""
+  } = apiUrls;
+  useEffect(() => {
+    if (!getActions) return;
+    fetch(getActions)
+      .then((res) => res.json())
+      .then((data) => setStepActionsOptions(data))
+      .catch((err) => console.error("Failed to fetch actions", err));
+  }, [getActions]);
+
+  useEffect(() => {
+    if (!getWorkflows) return;
+    fetch(getWorkflows)
+      .then((res) => res.json())
+      .then((data) => setAllWorkflows(data?.data || []))
+      .catch((err) => console.error("Failed to fetch workflows", err));
+  }, [getWorkflows]);
+
+  useEffect(() => {
+    if (selectedNode) {
+      const props = selectedNode.data.properties || {};
+
+      // Normalize property keys for the modal
+      setNodeProperties({
+        stepName: props.StepName || selectedNode.data.label,
+        role: props.Role || "",
+        purposeForForward: props.PurposeForForward || "",
+        shortPurposeForForward: props.ShortPurposeForForward || "",
+        stepActions: (props.StepActions || []).map(code => {
+          const found = stepActionsOptions.find(action => action.ActionCode === code);
+          return found?.ActionName || code; // fallback to code if not found
+        }),
+        commonActions: (props.CommonActions || []).map(code => {
+          const found = commonActionsOptions.find(action => action.ActionCode === code);
+          return found?.ActionName || code;
+        }),
+      });
+    }
+  }, [selectedNode]);
+  const handleKeyDown = useCallback((e) => {
+    const activeTag = document.activeElement?.tagName?.toLowerCase();
+    const isInputFocused = ["input", "textarea", "select"].includes(activeTag);
+
+    if (isInputFocused) return; // Don't handle shortcuts while typing
+
+    if ((e.ctrlKey || e.metaKey) && e.key === "z") {
+      e.preventDefault();
+      handleUndo();
+    }
+
+    if ((e.ctrlKey || e.metaKey) && (e.key === "y" || (e.shiftKey && e.key === "Z"))) {
+      e.preventDefault();
+      handleRedo();
+    }
+
+    if ((e.key === "Delete" || e.key === "Backspace") && !isLocked) {
+      if (selectedElements.length > 0) {
+        addToUndoStack();
+
+        const nodeIdsToDelete = selectedElements
+          .filter((el) => el.position)
+          .map((node) => node.id);
+
+        const edgeIdsToDelete = selectedElements
+          .filter((el) => el.source && el.target)
+          .map((edge) => edge.id);
+
+        setNodes((nds) => nds.filter((n) => !nodeIdsToDelete.includes(n.id)));
+        setEdges((eds) =>
+          eds
+            .filter((e) => !edgeIdsToDelete.includes(e.id))
+            .filter((e) => !nodeIdsToDelete.includes(e.source) && !nodeIdsToDelete.includes(e.target))
+        );
+      }
+    }
+  }, [selectedElements, isLocked]);
+
+
+  useEffect(() => {
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [handleKeyDown]);
+
+  const addToUndoStack = (newNodes = nodes, newEdges = edges) => {
+    setUndoStack((prev) => [...prev.slice(-49), { nodes: [...newNodes], edges: [...newEdges] }]);
+    setRedoStack([]); // Clear redo stack on new action
+  };
+  const handleUndo = () => {
+    if (undoStack.length > 0) {
+      const last = undoStack[undoStack.length - 1];
+      setRedoStack((prev) => [...prev, { nodes: [...nodes], edges: [...edges] }]); // Save current to redo
+      setNodes(last.nodes);
+      setEdges(last.edges);
+      setUndoStack((prev) => prev.slice(0, -1));
+    }
+  };
+  const handleRedo = () => {
+    if (redoStack.length > 0) {
+      const next = redoStack[redoStack.length - 1];
+      setUndoStack((prev) => [...prev, { nodes: [...nodes], edges: [...edges] }]); // Save current to undo
+      setNodes(next.nodes);
+      setEdges(next.edges);
+      setRedoStack((prev) => prev.slice(0, -1));
+    }
+  };
+
+  // Handle Drag Start
+  const onDragStart = (event, nodeType) => {
+    event.dataTransfer.setData("application/reactflow", nodeType);
+    event.dataTransfer.effectAllowed = "move";
+  };
+  const showLockedToast = () => {
+    if (!lockedToast) {
+      setLockedToast(true);
+      setTimeout(() => setLockedToast(false), 2000);
+    }
+  };
+  const gridSize = 20;
+
+  const snapToGrid = (x, y) => ({
+    x: Math.round(x / gridSize) * gridSize,
+    y: Math.round(y / gridSize) * gridSize,
+  });
+  // Handle Drop Event
+  const onDrop = (event) => {
+    if (isLocked) return showLockedToast();
+    event.preventDefault();
+    addToUndoStack();
+    const reactFlowBounds = event.target.getBoundingClientRect();
+    const nodeType = event.dataTransfer.getData("application/reactflow");
+
+    const rawPosition = {
+      x: event.clientX - reactFlowBounds.left - nodeWidth / 2,
+      y: event.clientY - reactFlowBounds.top - nodeHeight / 2,
+    };
+
+    const position = snapToGrid(rawPosition.x, rawPosition.y);
+    
+    const newNode = {
+      id: `${nodes.length + 1}`,
+      type: "custom",
+      position,
+      draggable: true,
+      data: { label: nodeType, nodeShape: nodeType, properties: {} },
+    };
+
+    setNodes((nds) => [...nds, newNode]);
+  };
+  // Allow dropping on canvas
+  const onDragOver = (event) => {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+  };
+
+  // Handle JSON file upload
+  const handleFileUpload = (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const jsonData = JSON.parse(e.target.result);
+        convertJsonToWorkflow(jsonData);
+      } catch (error) {
+        console.error("Invalid JSON file format", error);
+      }
+    };
+    reader.readAsText(file);
+  };
+  const handleCreateWorkflowClick = () => {
+    const newWorkflowOption = {
+      value: "new",
+      label: "➕ Create New Workflow",
+      data: null,
+    };
+
+    setWorkflowMeta({
+      name: "",
+      description: "",
+      dateEffective: new Date().toISOString(),
+    });
+    setSelectedWorkflowOption(newWorkflowOption);
+    setPendingAction("create");
+    setMetaModalOpen(true);
+  };
+
+  const workflowOptions = useMemo(() => [
+    { label: "➕ Create New Workflow", value: "new" },
+    ...(Array.isArray(allWorkflows) ? allWorkflows.map((w) => ({
+      label: `${w.Name} - ${w.Description}`,
+      value: w.Id,
+      data: w,
+    })) : [])
+  ], [allWorkflows]);
+  const convertJsonToWorkflow = async (data) => {
+    if (!data?.Workflow?.Steps) return;
+
+    const stepCodeToIdMap = {};
+    const newNodes = [];
+    const hasExplicitStop = data.Workflow.Steps.some(
+      (s) => {
+        const stepName = s.Properties?.StepName?.toLowerCase();
+        return stepName === "stop" || stepName === "completed";
+      }
+    );
+
+    // Step 1: Build nodes with positions and mappings
+    data.Workflow.Steps.forEach((step, index) => {
+      const stepCode = String(step.StepCode ?? index);
+      const rawPos = step.Position || {};
+      const position = {
+        x: rawPos.x ?? rawPos.X ?? (index % 4) * 200,
+        y: rawPos.y ?? rawPos.Y ?? Math.floor(index / 4) * 120,
+      };
+
+      const stepNameLower = step.Properties?.StepName?.toLowerCase();
+      const nodeShape =
+        step.Properties?.NodeShape ||
+        (stepNameLower === "start"
+          ? "Start"
+          : stepNameLower === "stop" || stepNameLower === "completed"
+            ? "Stop"
+            : "Step");
+
+      const isStop = stepNameLower === "stop" || stepNameLower === "completed";
+      stepCodeToIdMap[stepCode] = stepCode;
+
+      newNodes.push({
+        id: stepCode,
+        type: "custom",
+        position,
+        draggable: true,
+        data: {
+          label: isStop ? "Completed" : step.Properties?.StepName || stepCode,
+          nodeShape,
+          properties: {
+            StepName: isStop ? "Completed" : step.Properties?.StepName || stepCode,
+            Role: isStop ? "" : step.Properties?.Role || "",
+            PurposeForForward: isStop ? "" : step.Properties?.PurposeForForward || "",
+            ShortPurposeForForward: isStop ? "" : step.Properties?.ShortPurposeForForward || "",
+            StepActions: isStop ? [] : step.Properties?.StepActions || [],
+            CommonActions: isStop ? [] : step.Properties?.CommonActions || [],
+            NodeShape: nodeShape,
+          },
+        },
+      });
+    });
+
+    // Step 2: Identify unknown targets and prepare for Stop nodes
+    const allStepCodes = new Set(data.Workflow.Steps.map((s) => String(s.StepCode)));
+    const anchorTargets = new Set();
+
+    data.Workflow.Steps.forEach((step) => {
+      if (!step.AnchorActions || step.AnchorActions.length === 0) {
+        const stopStepCode = `${step.StepCode}_STOP`;
+        anchorTargets.add(stopStepCode);
+        step.AnchorActions = [
+          {
+            ActionName: "End",
+            ActionCode: "END",
+            NextStep: stopStepCode,
+          },
+        ];
+      } else {
+        step.AnchorActions.forEach((action) => {
+          const targetStepCode = String(action.NextStep);
+          if (!allStepCodes.has(targetStepCode)) {
+            anchorTargets.add(targetStepCode);
+          }
+        });
+      }
+    });
+
+    // Step 3: Add Stop nodes if needed
+    anchorTargets.forEach((stepCode) => {
+      if (!stepCodeToIdMap[stepCode]) {
+        if (stepCode.endsWith("_STOP") && hasExplicitStop) return;
+
+        stepCodeToIdMap[stepCode] = stepCode;
+        newNodes.push({
+          id: stepCode,
+          type: "custom",
+          position: {
+            x: 300,
+            y: (newNodes.length + 1) * 100,
+          },
+          draggable: true,
+          data: {
+            label: "Completed",
+            nodeShape: "Stop",
+            properties: {
+              StepName: "Completed",
+              NodeShape: "Stop",
+            },
+          },
+        });
+      }
+    });
+
+    // Step 4: Generate edges and merge duplicates
+    let newEdges = generate_styled_edges(data.Workflow.Steps, stepCodeToIdMap, newNodes);
+
+    const mergeDuplicateEdges = (edges) => {
+      const edgeMap = new Map();
+      edges.forEach((edge) => {
+        const key = `${edge.source}-${edge.target}`;
+        if (edgeMap.has(key)) {
+          const existing = edgeMap.get(key);
+          const mergedLabel = [existing.label, edge.label].filter(Boolean).filter((v, i, a) => a.indexOf(v) === i).join(" / ");
+          const mergedShortPurpose = [existing.data?.shortPurposeForForward, edge.data?.shortPurposeForForward].filter(Boolean).join(" / ");
+          const mergedPurpose = [existing.data?.purposeForForward, edge.data?.purposeForForward].filter(Boolean).join(" / ");
+
+          edgeMap.set(key, {
+            ...existing,
+            label: mergedLabel,
+            data: {
+              ...existing.data,
+              shortPurposeForForward: mergedShortPurpose,
+              purposeForForward: mergedPurpose,
+            },
+          });
+        } else {
+          edgeMap.set(key, edge);
+        }
+      });
+      return Array.from(edgeMap.values());
+    };
+
+    newEdges = mergeDuplicateEdges(newEdges);
+
+    // Step 5: Auto-add Start node if missing
+    const hasStart = newNodes.some((n) => n.data.nodeShape === "Start");
+    if (!hasStart && newNodes.length > 0) {
+      const firstNode = newNodes[0];
+      const startNodeId = "sys_start";
+
+      newNodes.unshift({
+        id: startNodeId,
+        type: "custom",
+        position: {
+          x: firstNode.position.x,
+          y: firstNode.position.y - 120,
+        },
+        draggable: true,
+        data: {
+          label: "Start",
+          nodeShape: "Start",
+          properties: {
+            StepName: "Start",
+            NodeShape: "Start",
+          },
+        },
+      });
+
+      newEdges.unshift({
+        id: `${startNodeId}-${firstNode.id}-StartEdge`,
+        source: startNodeId,
+        target: firstNode.id,
+        markerEnd: { type: MarkerType.ArrowClosed },
+        animated: false,
+        type: 'customSmooth',
+        style: { strokeWidth: 2, stroke: "#333" },
+      });
+
+      stepCodeToIdMap[startNodeId] = startNodeId;
+    }
+
+    // Step 6: Layout only if positions are missing
+    const allHavePositions = newNodes.every((n) => typeof n.position?.x === "number" && typeof n.position?.y === "number");
+    let finalNodes = [];
+
+    if (allHavePositions) {
+      finalNodes = newNodes;
+    } else {
+      finalNodes = await layoutTopDownCustom(newNodes, newEdges, "TB");
+    }
+
+    setNodes(finalNodes);
+
+    // Step 7: Color edges based on selected node
+    const coloredEdges = newEdges.map((edge) => {
+      let stroke = "#333";
+      if (selectedNode) {
+        if (edge.source === selectedNode.id) stroke = "green";
+        else if (edge.target === selectedNode.id) stroke = "red";
+      }
+      return {
+        ...edge,
+        style: {
+          ...(edge.style || {}),
+          stroke,
+          strokeWidth: 2,
+        },
+      };
+    });
+
+    setEdges(coloredEdges);
+
+    // Step 8: Auto-center the viewport
+    const bounds = finalNodes.reduce(
+      (acc, node) => {
+        acc.minX = Math.min(acc.minX, node.position.x);
+        acc.minY = Math.min(acc.minY, node.position.y);
+        acc.maxX = Math.max(acc.maxX, node.position.x + 150);
+        acc.maxY = Math.max(acc.maxY, node.position.y + 60);
+        return acc;
+      },
+      { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity }
+    );
+
+    const centerX = (bounds.minX + bounds.maxX) / 2;
+    const centerY = (bounds.minY + bounds.maxY) / 2;
+
+    setViewport({
+      x: window.innerWidth / 2 - centerX,
+      y: window.innerHeight / 2 - centerY,
+      zoom: 0.75,
+    });
+  };
+
+  const generateJson = (excludeStartStop = false) => {
+    let nodesCopy = [...nodes];
+    let edgesCopy = [...edges];
+
+    const graph = {};
+    const visited = new Set();
+    const sortedNodes = [];
+    const stepCodeMap = {};
+    let stepCodeCounter = 0;
+
+    // Build graph from edges
+    nodesCopy.forEach((node) => {
+      graph[node.id] = [];
+    });
+
+    edgesCopy.forEach((edge) => {
+      graph[edge.source].push({ target: edge.target, label: edge.label });
+    });
+
+    const startNode = nodesCopy.find((n) => n.data.nodeShape === "Start");
+    if (!startNode && nodesCopy.length > 0) {
+      const firstNode = nodes[0];
+      const startNodeId = "sys_start";
+
+      const newStartNode = {
+        id: startNodeId,
+        type: "custom",
+        position: {
+          x: firstNode.position.x,
+          y: firstNode.position.y - 120,
+        },
+        draggable: true,
+        data: {
+          label: "Start",
+          nodeShape: "Start",
+          properties: {
+            StepName: "Start",
+            NodeShape: "Start",
+          },
+        },
+      };
+
+      nodesCopy.unshift(newStartNode);
+
+      edgesCopy.unshift({
+        id: `${startNodeId}-${firstNode.id}-StartEdge`,
+        source: startNodeId,
+        target: firstNode.id,
+        markerEnd: { type: MarkerType.ArrowClosed },
+        animated: false,
+        type: 'customSmooth',
+        style: { strokeWidth: 2, stroke: "#333" },
+      });
+
+      startNode = newStartNode;
+    }
+
+    if (!startNode) {
+      alert("Still no Start node even after adding one automatically.");
+      return;
+    }
+
+    // DFS Traversal to handle cycles
+    const dfs = (currentId) => {
+      if (visited.has(currentId)) return;
+      visited.add(currentId);
+
+      const node = nodesCopy.find((n) => n.id === currentId);
+      if (!node) return;
+
+      const isStartStop =
+        node.data.nodeShape === "Start" || node.data.nodeShape === "Stop";
+
+      if (!excludeStartStop || !isStartStop) {
+        if (!stepCodeMap[currentId]) {
+          stepCodeMap[currentId] = `${stepCodeCounter++}`;
+        }
+        sortedNodes.push(node);
+      }
+
+      for (const neighbor of graph[currentId]) {
+        dfs(neighbor.target);
+      }
+    };
+
+    dfs(startNode.id);
+
+    // Optional: include disconnected nodes too (if desired)
+    nodesCopy.forEach((node) => {
+      if (!visited.has(node.id)) dfs(node.id);
+    });
+
+    // Build JSON
+    const jsonOutput = {
+      workflow: {
+        Name: workflowMeta.name || "Untitled Workflow",
+        Description: workflowMeta.description || "",
+        DateEffective: workflowMeta.dateEffective,
+        steps: sortedNodes.map((node) => {
+          const props = node.data.properties || {};
+          const outgoingEdges = edges.filter((e) => e.source === node.id);
+
+          const resolveAction = (actionName) =>
+            [...stepActionsOptions, ...commonActionsOptions].find(
+              (act) => act.ActionName === actionName
+            );
+
+          const AnchorActions = outgoingEdges
+            .filter((edge) => stepCodeMap[edge.target] !== undefined)
+            .map((edge) => {
+              const action = resolveAction(edge.label);
+              return {
+                ActionName: action?.ActionName || edge.label,
+                ActionCode: action?.ActionCode || "null",
+                NextStep: stepCodeMap[edge.target],
+                ShortPurposeForForward: edge.data?.shortPurposeForForward || "",
+                PurposeForForward: edge.data?.purposeForForward || "",
+                FromHandleId: edge.sourceHandle || "",
+                ToHandleId: edge.targetHandle || "",
+              };
+            });
+          // 👇 Add this conditional properties based on nodeShape
+          let properties;
+          if (node.data.nodeShape === "Stop") {
+            properties = {
+              StepName: "Completed",
+              NodeShape: "Stop",
+            };
+          } else {
+            properties = {
+              StepName: node.data.label,
+              Role: props.Role || "",
+              PurposeForForward: props.PurposeForForward || "",
+              ShortPurposeForForward: props.ShortPurposeForForward || "",
+              StepActions: (props.StepActions || []).map((name) => {
+                const action = stepActionsOptions.find((a) => a.ActionName === name);
+                return action?.ActionCode || name;
+              }),
+              CommonActions: (props.CommonActions || []).map((name) => {
+                const action = commonActionsOptions.find((a) => a.ActionName === name);
+                return action?.ActionCode || name;
+              }),
+              NodeShape: node.data.nodeShape || "",
+            };
+          }
+
+          return {
+            StepCode: stepCodeMap[node.id],
+            Properties: properties,
+            Position: node.position,
+            AnchorActions,
+          };
+        }),
+      },
+    };
+
+    console.log("✅ Generated JSON:", jsonOutput);
+    return jsonOutput;
+  };
+
+
+  // Function to show JSON in a modal
+  const viewJson = () => {
+    setJsonData(JSON.stringify(generateJson(false), null, 2));
+    setModalIsOpen1(true);
+  };
+
+  // Function to download JSON file
+  const downloadJson = () => {
+    const jsonOutput = generateJson(false);
+    const jsonString = JSON.stringify(jsonOutput, null, 2);
+    const blob = new Blob([jsonString], { type: "application/json" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = "workflow.json";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+  useEffect(() => {
+    const closeMenus = (e) => {
+      const edgeMenu = document.getElementById("edge-context-menu");
+      if (edgeMenu && edgeMenu.contains(e.target)) return;
+      setContextMenu(null);
+      setNodeContextMenu(null);
+    };
+
+    window.addEventListener("click", closeMenus);
+    return () => window.removeEventListener("click", closeMenus);
+  }, []);
+
+  //handle node right click
+
+  const handleNodeRightClick = (event, node) => {
+    if (isLocked) return showLockedToast();
+    event.preventDefault();
+    setSelectedNode(node);
+    setNodeContextMenu({
+      x: event.clientX,
+      y: event.clientY,
+      node,
+    });
+    setNodeMenuPosition({ x: event.clientX, y: event.clientY });
+  };
+
+  // Function to select node and show properties
+  const handleNodeClick = (event, node) => {
+    if (isLocked) return showLockedToast();
+    if (node.data.nodeShape === "Start" || node.data.nodeShape === "Stop") {
+      return;
+    }
+
+    setSelectedNode(node);
+
+    const props = node.data.properties || {};
+
+    // Normalize keys for modal
+    const normalizedProps = {
+      stepName: props.StepName || node.data.label,
+      role: props.Role || "",
+      stepActions: props.StepActions || [],
+      commonActions: props.CommonActions || [],
+      purposeForForward: props.PurposeForForward || "",
+      shortPurposeForForward: props.ShortPurposeForForward || "",
+    };
+    console.log("🎯 Normalized Props:", normalizedProps);
+    setNodeProperties(normalizedProps);
+    setModalIsOpen(true);
+  };
+  // Function to update node properties
+  const updateNodeProperties = (e) => {
+    const { name } = e.target;
+    let value;
+
+    // Handle different input types correctly
+    if (e.target.type === "checkbox") {
+      value = e.target.checked;
+    } else {
+      value = e.target.value;
+    }
+
+    setNodeProperties((prevProps) => ({
+      ...prevProps,
+      [name]: value,
+    }));
+  };
+
+  // Save properties to the node
+  const saveNodeProperties = () => {
+    addToUndoStack();
+    setNodes((nds) =>
+      nds.map((n) =>
+        n.id === selectedNode.id
+          ? {
+            ...n,
+            data: {
+              ...n.data,
+              label: nodeProperties.stepName || n.data.label,
+              properties: {
+                StepName: nodeProperties.stepName || "",
+                Role: nodeProperties.role || "",
+                PurposeForForward: nodeProperties.purposeForForward || "",
+                ShortPurposeForForward: nodeProperties.shortPurposeForForward || "",
+                StepActions: nodeProperties.stepActions || [],
+                CommonActions: nodeProperties.commonActions || [],
+                NodeShape: n.data.nodeShape,
+              },
+            },
+          }
+          : n
+      )
+    );
+    setSelectedNode(null);
+    setModalIsOpen(false);
+  };
+
+  // Allow changing edge connections dynamically
+  const onEdgeUpdate = (oldEdge, newConnection) => {
+    setEdges((eds) =>
+      eds.map((edge) =>
+        edge.id === oldEdge.id ? { ...edge, ...newConnection } : edge
+      )
+    );
+  };
+  // Save current workflow JSON to backend
+  const saveWorkflowToAPI = async () => {
+    // Validation: If any field is missing, show the meta modal
+    if (!workflowMeta.name || !workflowMeta.description || !workflowMeta.dateEffective) {
+      setPendingAction("save");
+      setMetaModalOpen(true);
+      return;
+    }
+    const workflowJson = generateJson(false);
+    if (selectedWorkflowOption && selectedWorkflowOption.value && selectedWorkflowOption.value !== "new") {
+      workflowJson.workflow.Id = selectedWorkflowOption.value;
+    }
+    try {
+      const response = await fetch(saveWorkflow, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(workflowJson),
+      });
+
+      if (response.ok) {
+        alert("✅ Workflow saved successfully!");
+
+      } else {
+        alert("❌ Failed to save workflow.");
+      }
+    } catch (error) {
+      console.error("Error saving workflow:", error);
+      alert("🚨 Error occurred while saving workflow.");
+    }
+  };
+
+  // Load workflow from backend and render on canvas
+  /*const loadWorkflow = async () => {
+     try {
+       const response = await fetch("https://app.jassi.me/get/65");
+       const data = await response.json();
+ 
+       if (data?.Workflow?.Steps?.length > 0) {
+         convertJsonToWorkflow(data);
+         setWorkflowMeta({
+           name: data.Workflow.Name || "",
+           description: data.Workflow.Description || "",
+           dateEffective: data.Workflow.DateEffective || new Date().toISOString(),
+         });
+         setSelectedWorkflowOption({
+           label: `${data.Workflow.Name} - ${data.Workflow.Description}`,
+           value: data.Workflow.Id,
+           data: data.Workflow,
+         });
+         alert("📥 Workflow loaded successfully!");
+       } else {
+         alert("⚠️ No workflow data found.");
+       }
+     } catch (error) {
+       console.error("Error loading workflow:", error);
+       alert("🚨 Error occurred while loading workflow.");
+     }
+   };*/
+
+
+
+  const updateEdgeLabel = (label) => {
+    if (selectedEdge) {
+      addToUndoStack();
+      setEdges((eds) =>
+        eds.map((edge) =>
+          edge.id === selectedEdge.id ? { ...edge, label } : edge
+        )
+      );
+      setSelectedEdge((prev) => ({ ...prev, label }));
+    }
+    setContextMenu(null);
+  };
+  const handleEdgeRightClick = (event, edge) => {
+    if (isLocked) return showLockedToast();
+    event.preventDefault();
+    setSelectedEdge({
+      ...edge,
+      data: {
+        shortPurposeForForward: edge.data?.shortPurposeForForward || "",
+        purposeForForward: edge.data?.purposeForForward || "",
+        ...edge.data, // preserve existing values
+      },
+    });
+    setContextMenu({ x: event.clientX, y: event.clientY });
+    setEdgeMenuPosition({ x: event.clientX, y: event.clientY });
+  };
+  const stepOptionsFormatted = stepActionsOptions.map((action) => ({
+    label: action.ActionName,
+    value: action.ActionName,
+  }));
+
+  const commonOptionsFormatted = commonActionsOptions.map((action) => ({
+    label: action.ActionName,
+    value: action.ActionName,
+  }));
+  const handleActionWithMeta = (actionType) => {
+    const startNodeExists = nodes.some((node) => node.data?.nodeShape === "Start");
+
+    if (!startNodeExists) {
+      alert("⚠️ Please drag and place a Start node first before saving or viewing the workflow.");
+      return;
+    }
+    if (actionType === "save") {
+      if (!workflowMeta.name || !workflowMeta.description) {
+        setPendingAction(actionType);
+        setMetaModalOpen(true);
+        return;
+      }
+      saveWorkflowToAPI();
+      return;
+    }
+
+    if (actionType === "view") {
+      viewJson();
+      return;
+    }
+
+    if (actionType === "download") {
+      downloadJson();
+      return;
+    }
+    if (actionType === "create") {
+      handleCreateWorkflowClick();
+      return;
+    }
+  };
+
+  const handleMetaContinue = () => {
+    setMetaModalOpen(false);
+    if (pendingAction === "save") {
+      saveWorkflowToAPI();
+    }
+    if (pendingAction === "create") {
+      // Clear canvas
+      setNodes([]);
+      setEdges([]);
+
+      // Reset workflow metadata (if needed)
+      setWorkflowMeta((prev) => ({
+        ...prev,
+        dateEffective: new Date().toISOString(),
+      }));
+
+      // Reset workflow option
+      setSelectedWorkflowOption({
+        value: "new",
+        label: "➕ Create New Workflow",
+        data: null,
+      });
+
+      setLoadedWorkflowMeta(null); // Also clear display of loaded workflow
+    }
+
+    setPendingAction(null);
+  };
+  const memoizedNodes = useMemo(() => {
+    return nodes.map((n) => ({ ...n, draggable: !isLocked }));
+  }, [nodes, isLocked]);
+  return (
+    <div style={{ paddingTop: "0px", height: "100vh", width: "100vw", display: "flex", background: "#e2e8f0" }}>
+      {/* Sidebar Menu */}
+      <div style={{
+        width: "220px",
+        background: "#e2e8f0",
+        color: "#1e293b",
+        padding: "18px",
+        display: "flex",
+        flexDirection: "column",
+        gap: "12px",
+        boxShadow: "2px 0 8px rgba(0, 0, 0, 0.05)",
+        fontFamily: "Inter, sans-serif",
+        overflowY: "auto",
+        flexShrink: 0, // Prevent it from shrinking
+        position: "relative",
+      }}>
+
+        <h4
+          style={{
+            margin: "0 0 12px",
+            textAlign: "center",
+            color: "#0284c7",
+            fontSize: "16px",
+            fontWeight: "600",
+          }}
+        >
+          ⚙️ Menu
+        </h4>
+        <div style={{ position: "absolute", top: 18, right: 10, display: "flex", gap: "4px" }}>
+          {/* Undo Button */}
+          <div
+            style={{
+              background: "#e2e8f0",
+              borderRadius: "50%",
+              padding: "6px",
+              cursor: "pointer",
+            }}
+            onClick={handleUndo}
+            title="Undo (Ctrl+Z)"
+          >
+            <FiRotateCcw size={12} color="#1e293b" />
+          </div>
+          {/* Redo Button */}
+          <div
+            style={{
+              background: "#e2e8f0",
+              borderRadius: "50%",
+              padding: "6px",
+              cursor: "pointer",
+            }}
+            onClick={handleRedo}
+            title="Redo (Ctrl+Y)"
+          >
+            <FiRotateCw size={12} color="#1e293b" />
+          </div>
+
+          {/* Refresh Button */}
+          <div
+            style={{
+              background: "#e2e8f0",
+              borderRadius: "50%",
+              padding: "6px",
+              cursor: "pointer",
+            }}
+            onClick={() => window.location.reload()}
+            title="Refresh Page"
+          >
+            <FiRefreshCw size={12} color="#1e293b" />
+          </div>
+        </div>
+        {/* File Upload */}
+        <input
+          type="file"
+          accept="application/json"
+          onChange={handleFileUpload}
+          style={{
+            fontSize: "12px",
+            padding: "5px",
+            background: "#ffffff",
+            color: "#0f172a",
+            border: "1px solid #cbd5e1",
+            borderRadius: "6px",
+            cursor: "pointer",
+          }}
+        />
+
+        {/* Node Types */}
+
+        {config?.buttons?.create !== false && (
+          <div style={{ background: "#ffffff", padding: "10px", borderRadius: "10px", border: "1px solid #cbd5e1" }}>
+            <p style={{ fontWeight: "bold", margin: "5px 0", color: "#0ea5e9", fontSize: "12px" }}>🧱 Node Types</p>
+            {sidebarNodeTypes.map(({ label, color, shape }) => (
+              <div
+                key={label}
+                style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "14px", cursor: "grab" }}
+              >
+                <span style={{ fontSize: "13px" }}>{label}</span>
+                <div
+                  draggable
+                  onDragStart={(e) => onDragStart(e, label)}
+                  style={{
+                    width: shape === "diamond" ? 20 : 20,
+                    height: shape === "diamond" ? 20 : 20,
+                    background: color,
+                    ...(shape === "circle" && { borderRadius: "50%" }),
+                    ...(shape === "diamond" && { transform: "rotate(45deg)" }),
+                    marginLeft: "10px",
+                  }}
+                />
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Action Buttons */}
+        {sidebarButtons.map(({ label, icon, action, color }) => (
+          <button
+            key={label}
+            onClick={action}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "flex-start",
+              gap: "12px",
+              backgroundColor: color,
+              color: "#ffffff",
+              fontSize: "14px",
+              padding: "8px 12px",
+              marginTop: "5px",
+              border: "none",
+              borderRadius: "6px",
+              cursor: "pointer",
+              transition: "0.2s",
+              boxShadow: "0 1px 4px rgba(0,0,0,0.1)",
+              lineHeight: "1",
+            }}
+          >
+            <span style={{ display: "flex", alignItems: "center", marginLeft: "35px" }}>{icon}</span>
+            <span style={{ fontWeight: 500 }}>{label}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* Workflow Editor */}
+      <div style={{ paddingTop: 0, flexGrow: 1, height: "100vh", position: "relative", overflow: "hidden", }}>
+        {loadedWorkflowMeta && (
+          <div style={{
+            position: "absolute",
+            top: 10,
+            left: 240,
+            padding: "8px 16px",
+            background: "#0284c7",
+            color: "#fff",
+            borderRadius: "8px",
+            zIndex: 20,
+            fontSize: "14px",
+            fontWeight: "bold",
+          }}>
+            📄 Workflow --  {loadedWorkflowMeta.name} - {loadedWorkflowMeta.description}
+          </div>
+        )}
+        <ReactFlow
+          nodes={memoizedNodes}
+          edges={edges.map((edge) => {
+            const sourceNode = nodes.find((n) => n.id === edge.source);
+            const targetNode = nodes.find((n) => n.id === edge.target);
+            let stroke = "#333"; // default neutral
+
+            if (sourceNode && targetNode) {
+              if (targetNode.position.y > sourceNode.position.y) {
+                stroke = "green"; // Forward
+              } else if (targetNode.position.y < sourceNode.position.y) {
+                stroke = "red"; // Backward
+              }
+            }
+
+            return {
+              ...edge,
+              style: {
+                ...(edge.style || {}),
+                stroke,
+                strokeWidth: 2,
+              },
+            };
+          })}
+
+
+          edgeTypes={edgeTypes}
+          nodeTypes={nodeTypes}
+          onNodesChange={isLocked ? undefined : onNodesChange}
+          onEdgesChange={isLocked ? undefined : onEdgesChange}
+          onNodeClick={isLocked ? undefined : handleNodeClick}
+          onSelectionChange={(e) => {
+            const selected = [...(e?.nodes || []), ...(e?.edges || [])];
+
+            // Avoid infinite loop by comparing with existing state
+            const isSameSelection =
+              selected.length === selectedElements.length &&
+              selected.every((el, index) => el.id === selectedElements[index]?.id);
+
+            if (!isSameSelection) {
+              setSelectedElements(selected);
+            }
+          }}
+          // <-- capture selection
+          selectionKeyCode="Shift"
+          multiSelectionKeyCode="Meta" // For Mac CMD key
+          onDrop={isLocked ? undefined : onDrop}
+          onDragOver={isLocked ? undefined : onDragOver}
+          onConnect={isLocked ? showLockedToast : (params) => {
+            if (params.source === "stop") {
+              alert("🚫 You cannot draw connections from the Stop node.");
+              return;
+            }
+            addToUndoStack();
+            setEdges((eds) =>
+              addEdge(
+                {
+                  ...params,
+                  sourceHandle: params.sourceHandle,
+                  targetHandle: params.targetHandle,
+                  animated: false,
+                  type: edgeStyle,
+                  markerEnd: { type: MarkerType.ArrowClosed },
+                  style: { strokeWidth: 2, stroke: "#333" },
+                  label: "",
+                  data: {
+                    shortPurposeForForward: "", purposeForForward: "", sourceHandle: params.sourceHandle,
+                    targetHandle: params.targetHandle,
+                  },
+                  labelStyle: { fill: "#fff", fontWeight: 700 },
+                },
+                eds
+              )
+            );
+          }}
+          onNodeMouseEnter={(_, node) => {
+            clearTimeout(hoverTimeout);
+            setHoveredNodeId(node.id);
+          }}
+          onNodeMouseLeave={() => {
+            hoverTimeout = setTimeout(() => setHoveredNodeId(null), 150);
+          }}
+          onNodeContextMenu={isLocked ? undefined : handleNodeRightClick}
+          onEdgeUpdate={onEdgeUpdate}
+          onEdgeContextMenu={isLocked ? undefined : handleEdgeRightClick}
+          onEdgeMouseEnter={(_, edge) => setHoveredEdgeId(edge.id)}
+          onEdgeMouseLeave={() => setHoveredEdgeId(null)}
+          defaultViewport={{ x: 0, y: 0, zoom: 1 }}
+          style={{ background: "#F5F5F5" }}
+        >
+          <CanvasControls
+            backgroundVariant={backgroundVariant}
+            setBackgroundVariant={setBackgroundVariant}
+          />
+          <MiniMap
+            nodeColor={(node) => {
+              switch (node.data?.nodeShape) {
+                case "Start": return "#9fda7c";
+                case "Stop": return "#FFB7B4";
+                case "Step": return "#82d6f7";
+                case "Decision": return "#B388EB";
+                default: return "#82d6f7";
+              }
+            }}
+            nodeStrokeWidth={2}
+            nodeBorderRadius={3}
+            maskColor="rgba(255,255,255,0.6)"
+            style={{
+              height: 107,
+              width: 200,
+              border: "1px solid #ccc",
+              bottom: 10,
+              right: 30,
+              zIndex: 20,
+            }}
+
+          />
+          <Controls
+            position="top-right"
+            style={{
+              zIndex: 10,              // Make sure it shows above everything
+              marginRight: 10,
+              marginTop: 469,
+
+            }}
+          > <ControlButton
+            title={isLocked ? "Unlock Canvas" : "Lock Canvas"}
+            onClick={() => setIsLocked((prev) => !prev)}>
+              {isLocked ? <FaLock color="#333" /> : <FaUnlock color="#333" />}
+            </ControlButton> </Controls>
+          {backgroundVariant !== "solid" && (
+            <Background
+              variant={backgroundVariant}
+              gap={12}
+              color="#d4d4d4"
+            />
+          )}
+          {selectedElements.length > 1 && (
+            <div
+              style={{
+                position: "absolute",
+                top: 10,
+                left: "50%",
+                transform: "translateX(-50%)",
+                background: "#0f172a",
+                color: "#fff",
+                padding: "6px 12px",
+                borderRadius: "6px",
+                fontSize: "14px",
+                zIndex: 50,
+                boxShadow: "0 2px 6px rgba(0,0,0,0.3)"
+              }}
+            >
+              🔗 {selectedElements.length} nodes selected
+            </div>
+          )}
+
+        </ReactFlow>
+        <EdgeLabelRenderer>
+          {edges
+            .filter((edge) => edge.id === hoveredEdgeId)
+            .map((edge) => {
+              const sourceNode = nodes.find((n) => n.id === edge.source);
+              const targetNode = nodes.find((n) => n.id === edge.target);
+              if (!sourceNode || !targetNode) return null;
+
+              const edgeCenterX = (sourceNode.position.x + targetNode.position.x) / 2 + 75;
+              const edgeCenterY = (sourceNode.position.y + targetNode.position.y) / 2 + 30;
+
+              return (
+                <div
+                  key={`tooltip-${edge.id}`}
+                  style={{
+                    position: 'absolute',
+                    transform: `translate(-50%, -50%) translate(${edgeCenterX}px, ${edgeCenterY}px)`,
+                    background: '#fefce8',
+                    color: 'black',
+                    padding: '6px 10px',
+                    borderRadius: '6px',
+                    fontSize: '12px',
+                    whiteSpace: 'pre-line',
+                    maxWidth: '240px',
+                    zIndex: 999,
+                    pointerEvents: 'none',
+                    boxShadow: '0 4px 10px rgba(0,0,0,0.3)',
+                  }}
+                >
+                  <div><strong>{edge.label || 'No Label'}</strong></div>
+                  {edge?.data?.shortPurposeForForward && (
+                    <div><em>{edge.data.shortPurposeForForward}</em></div>
+                  )}
+                  {edge?.data?.purposeForForward && (
+                    <div style={{ marginTop: '4px' }}>{edge.data.purposeForForward}</div>
+                  )}
+                </div>
+              );
+            })}
+        </EdgeLabelRenderer>
+      </div>
+      {
+        !isLocked && contextMenu && selectedEdge && (
+          <div
+            id="edge-context-menu"
+            style={{
+              position: "absolute",
+              top: edgeMenuPosition.y,
+              left: edgeMenuPosition.x,
+              background: "white",
+              border: "1px solid black",
+              borderRadius: "10px",
+              boxShadow: "0 4px 10px rgba(0, 0, 0, 0.3)",
+              padding: "10px",
+              zIndex: 1000,
+              minWidth: "250px",
+              cursor: isDraggingEdgeMenu ? "grabbing" : "grab",
+            }}
+            onMouseDown={(e) => {
+              setIsDraggingEdgeMenu(true);
+              setDragOffset({
+                x: e.clientX - edgeMenuPosition.x,
+                y: e.clientY - edgeMenuPosition.y,
+              });
+            }}
+            onMouseMove={(e) => {
+              if (isDraggingEdgeMenu) {
+                setEdgeMenuPosition({
+                  x: e.clientX - dragOffset.x,
+                  y: e.clientY - dragOffset.y,
+                });
+              }
+            }}
+            onMouseUp={() => {
+              setIsDraggingEdgeMenu(false);
+            }}
+            onMouseLeave={() => {
+              setIsDraggingEdgeMenu(false);
+            }}
+          >
+            <label style={{ marginTop: "15px", display: "block", marginBottom: "5px" }}>
+              Select Edge Action:
+            </label>
+            <Select
+              options={[
+                { label: "Approve", value: "Approve" },
+                { label: "Reject", value: "Reject" },
+                { label: "Review", value: "Review" },
+                { label: "Send Back", value: "Send Back" },
+                { label: "Forward", value: "Forward" },
+                { label: "Save", value: "Save" },
+              ]}
+              value={{ label: selectedEdge.label, value: selectedEdge.label }}
+              onChange={(selected) => updateEdgeLabel(selected.value)}
+            />
+
+            <div style={{ marginTop: "10px" }}>
+              {/* Short Purpose */}
+              <label style={{ display: "block", marginBottom: "5px" }}>
+                Short Purpose for Forward:
+              </label>
+              <input
+                type="text"
+                name="shortPurposeForForward"
+                value={selectedEdge?.data?.shortPurposeForForward || ""}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setEdges((prevEdges) =>
+                    prevEdges.map((edge) =>
+                      edge.id === selectedEdge.id
+                        ? {
+                          ...edge,
+                          data: {
+                            ...edge.data,
+                            shortPurposeForForward: value,
+                          },
+                        }
+                        : edge
+                    )
+                  );
+                  setSelectedEdge((prev) => ({
+                    ...prev,
+                    data: {
+                      ...prev.data,
+                      shortPurposeForForward: value,
+                    },
+                  }));
+                }}
+                style={{
+                  padding: "8px",
+                  borderRadius: "6px",
+                  border: "1px solid #ccc",
+                  marginBottom: "10px",
+                  width: "90%",
+                }}
+              />
+
+              {/* Purpose */}
+              <label style={{ display: "block", marginBottom: "5px" }}>
+                Purpose for Forward:
+              </label>
+              <textarea
+                name="purposeForForward"
+                rows={4}
+                value={(() => {
+                  const edge = edges.find((e) => e.id === selectedEdge?.id);
+                  return edge?.data?.purposeForForward || "";
+                })()}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setEdges((prevEdges) =>
+                    prevEdges.map((edge) =>
+                      edge.id === selectedEdge.id
+                        ? {
+                          ...edge,
+                          data: {
+                            ...edge.data,
+                            purposeForForward: value,
+                          },
+                        }
+                        : edge
+                    )
+                  );
+                }}
+                style={{
+                  padding: "6px",
+                  borderRadius: "5px",
+                  border: "1px solid #ccc",
+                  resize: "vertical",
+                  width: "90%",
+                }}
+              />
+            </div>
+
+            <hr style={{ margin: "10px 0" }} />
+            <p
+              onClick={() => {
+                setEdges((prev) => prev.filter((e) => e.id !== selectedEdge.id));
+                setSelectedEdge(null);
+                setContextMenu(null);
+              }}
+              style={{ color: "red", cursor: "pointer" }}
+            >
+              🗑 Delete Edge
+            </p>
+          </div>
+        )
+      }
+
+      {
+        !isLocked && nodeContextMenu && (
+          <div
+            style={{
+              position: "absolute",
+              top: nodeMenuPosition.y,
+              left: nodeMenuPosition.x,
+              background: "white",
+              border: "1px solid black",
+              padding: "10px",
+              zIndex: 1000,
+              minWidth: "140px",
+              cursor: isDraggingNodeMenu ? "grabbing" : "grab",
+            }}
+            onMouseDown={(e) => {
+              setIsDraggingNodeMenu(true);
+              setDragOffset({
+                x: e.clientX - nodeMenuPosition.x,
+                y: e.clientY - nodeMenuPosition.y,
+              });
+            }}
+            onMouseMove={(e) => {
+              if (isDraggingNodeMenu) {
+                setNodeMenuPosition({
+                  x: e.clientX - dragOffset.x,
+                  y: e.clientY - dragOffset.y,
+                });
+              }
+            }}
+            onMouseUp={() => setIsDraggingNodeMenu(false)}
+            onMouseLeave={() => setIsDraggingNodeMenu(false)}
+          >
+            <p
+              onClick={() => {
+                const nodeId = nodeContextMenu.node.id;
+                const nodeShape = nodeContextMenu.node.data.nodeShape;
+                if (nodeShape === "Start" || nodeShape === "Stop") {
+                  alert("🚫 Start and Stop nodes cannot be deleted.");
+                  return;
+                }
+                addToUndoStack();
+                const updatedNodes = nodes.filter((n) => n.id !== nodeId);
+                const updatedEdges = edges.filter(
+                  (e) => e.source !== nodeId && e.target !== nodeId
+                );
+                setNodes(updatedNodes);
+                setEdges(updatedEdges);
+                setNodeContextMenu(null);
+              }}
+              style={{ cursor: "pointer", marginBottom: "5px" }}
+            >
+              🗑 Delete Node
+            </p>
+            <p
+              onClick={() => {
+                const newLabel = prompt(
+                  "Rename node:",
+                  nodeContextMenu.node.data.label
+                );
+                if (newLabel) {
+                  setNodes((nds) =>
+                    nds.map((n) =>
+                      n.id === nodeContextMenu.node.id
+                        ? { ...n, data: { ...n.data, label: newLabel } }
+                        : n
+                    )
+                  );
+                }
+                setNodeContextMenu(null);
+              }}
+              style={{ cursor: "pointer", marginBottom: "5px" }}
+            >
+              ✏️ Rename Node
+            </p>
+            <p
+              onClick={() => {
+                const newNodeId = `${nodes.length + 1}`;
+                const newNode = {
+                  id: newNodeId,
+                  type: "custom",
+                  position: {
+                    x: nodeContextMenu.node.position.x + 200,
+                    y: nodeContextMenu.node.position.y + 100,
+                  },
+                  data: { label: "Step", properties: {} },
+                };
+                const newEdge = {
+                  id: `${nodeContextMenu.node.id}-${newNodeId}`,
+                  source: nodeContextMenu.node.id,
+                  target: newNodeId,
+                  label: "Forward",
+                  animated: false,
+                  markerEnd: { type: MarkerType.ArrowClosed },
+                  style: { stroke: "#2980b9", strokeWidth: 2 },
+                };
+
+                setNodes((nds) => [...nds, newNode]);
+                setEdges((eds) => [...eds, newEdge]);
+                setNodeContextMenu(null);
+              }}
+              style={{ cursor: "pointer" }}
+            >
+              ➕ Add Connected Node
+            </p>
+            <p
+              onClick={() => {
+                const original = nodeContextMenu.node;
+                const newId = `${nodes.length + 1}`;
+
+                const duplicatedNode = {
+                  ...original,
+                  id: newId,
+                  position: {
+                    x: original.position.x + 40,
+                    y: original.position.y + 40,
+                  },
+                  data: {
+                    ...original.data,
+                    label: original.data.label + " (copy)",
+                    properties: { ...original.data.properties },
+                  },
+                };
+                addToUndoStack();
+                setNodes((nds) => [...nds, duplicatedNode]);
+                setNodeContextMenu(null);
+              }}
+              style={{ cursor: "pointer", marginBottom: "5px" }}
+            >
+              🔁 Duplicate Node
+            </p>
+          </div>
+        )
+      }
+
+      {/* Node Properties Modal */}
+      <Modal
+        isOpen={modalIsOpen}
+        onRequestClose={() => setModalIsOpen(false)}
+        style={{
+          content: {
+            width: "30%",
+            margin: "auto",
+            padding: "15px",
+            borderRadius: "10px",
+            boxShadow: "0 4px 10px rgba(0, 0, 0, 0.3)",
+          },
+        }}
+      >
+        <h2 style={{ textAlign: "center", marginBottom: "15px" }}>
+          Node Properties
+        </h2>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+          {/* Description Field */}
+          <label style={{ fontWeight: "bold" }}>Description (Step Name):</label>
+          <input
+            type="text"
+            name="stepName"
+            value={nodeProperties.stepName || ""}
+            onChange={updateNodeProperties}
+            style={{
+              padding: "8px",
+              borderRadius: "5px",
+              border: "1px solid #ccc",
+            }}
+          />
+          <label style={{ fontWeight: "bold" }}>Role:</label>
+          <Select
+            options={[
+              { label: "HR", value: "HR" },
+              { label: "User", value: "User" },
+              { label: "Manager", value: "Manager" },
+            ]}
+            value={
+              nodeProperties.role
+                ? { label: nodeProperties.role, value: nodeProperties.role }
+                : null
+            }
+            onChange={(selected) =>
+              setNodeProperties((prev) => ({
+                ...prev,
+                role: selected.value,
+              }))
+            }
+          />
+          {/* Step Actions Multi-Select */}
+          <label style={{ fontWeight: "bold" }}>Step Actions:</label>
+          <Select
+            isMulti
+            options={stepOptionsFormatted}
+            value={stepOptionsFormatted.filter((opt) =>
+              nodeProperties.stepActions?.includes(opt.value)
+            )}
+            onChange={(selected) =>
+              setNodeProperties((prev) => ({
+                ...prev,
+                stepActions: selected ? selected.map((item) => item.value) : [],
+              }))
+            }
+          />
+          {/* Common Actions Multi-Select */}
+          <label style={{ fontWeight: "bold" }}>Common Actions:</label>
+          <Select
+            isMulti
+            options={commonOptionsFormatted}
+            value={commonOptionsFormatted.filter((opt) =>
+              nodeProperties.commonActions?.some(
+                (val) => val?.toLowerCase?.() === opt.value.toLowerCase()
+              )
+            )}
+            onChange={(selected) =>
+              setNodeProperties((prev) => ({
+                ...prev,
+                commonActions: selected ? selected.map((item) => item.value) : [],
+              }))
+            }
+          />
+
+          {/* Buttons */}
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-evenly",
+              marginTop: "20px",
+            }}
+          >
+            <button
+              onClick={saveNodeProperties}
+              style={{
+                padding: "10px 15px",
+                background: "#3498db",
+                color: "white",
+                border: "none",
+                borderRadius: "5px",
+                cursor: "pointer",
+              }}
+            >
+              Save
+            </button>
+            <button
+              onClick={() => setModalIsOpen(false)}
+              style={{
+                padding: "10px 15px",
+                background: "#e74c3c",
+                color: "white",
+                border: "none",
+                borderRadius: "5px",
+                cursor: "pointer",
+              }}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* JSON View Modal */}
+      <Modal
+        isOpen={modalIsOpen1}
+        onRequestClose={() => setModalIsOpen1(false)}
+        style={{ content: { width: "50%", margin: "auto" } }}
+      >
+        <h2>Workflow JSON</h2>
+        <pre>{jsonData}</pre>
+        <button onClick={() => setModalIsOpen1(false)}>Close</button>
+      </Modal>
+      {
+        lockedToast && (
+          <div
+            style={{
+              position: "absolute",
+              top: 70,
+              right: 20,
+              backgroundColor: "#f87171",
+              color: "#fff",
+              padding: "10px 16px",
+              borderRadius: "8px",
+              fontSize: "14px",
+              boxShadow: "0 4px 10px rgba(0,0,0,0.15)",
+              zIndex: 30,
+              animation: "fadeInOut 2s ease",
+            }}
+          >
+            🚫 Workflow is locked
+          </div>
+        )
+      }
+      {/* Workflow naming Modal */}
+      <Modal
+        isOpen={metaModalOpen}
+        onRequestClose={() => setMetaModalOpen(false)}
+        style={{
+          content: {
+            width: "30%",
+            height: "80%",
+            margin: "auto",
+            padding: "10px",
+            borderRadius: "10px",
+            boxShadow: "0 4px 10px rgba(0, 0, 0, 0.3)",
+          },
+        }}
+      >
+        <h3 style={{ textAlign: "center", marginBottom: "10px" }}>
+          Workflow Details
+        </h3>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+          {pendingAction !== "create" && (
+            <>
+              <label style={{ fontWeight: "bold" }}>Select Workflow:</label>
+              <Select
+                options={workflowOptions}
+                value={selectedWorkflowOption}
+                onChange={(selected) => {
+                  setSelectedWorkflowOption(selected);
+                  if (selected.value === "new") {
+                    setWorkflowMeta({
+                      name: "",
+                      description: "",
+                      dateEffective: new Date().toISOString(),
+                    });
+                  } else {
+                    setWorkflowMeta({
+                      name: selected.data.Name,
+                      description: selected.data.Description,
+                      dateEffective: new Date().toISOString(),
+                    });
+                  }
+                }}
+              />
+            </>
+          )}
+
+          <label style={{ fontWeight: "bold" }}>Name:</label>
+          <input
+            type="text"
+            maxLength={64}
+            value={workflowMeta.name}
+            onChange={(e) =>
+              setWorkflowMeta({ ...workflowMeta, name: e.target.value })
+            }
+            style={{
+              padding: "8px",
+              borderRadius: "5px",
+              border: "1px solid #ccc",
+            }}
+          />
+
+          <label style={{ fontWeight: "bold" }}>Description:</label>
+          <textarea
+            maxLength={256}
+            value={workflowMeta.description}
+            onChange={(e) =>
+              setWorkflowMeta({
+                ...workflowMeta,
+                description: e.target.value,
+              })
+            }
+            style={{
+              padding: "8px",
+              borderRadius: "5px",
+              border: "1px solid #ccc",
+              height: "60px",
+            }}
+          />
+
+          <label style={{ fontWeight: "bold" }}>Effective Date:</label>
+          <input
+            type="datetime-local"
+            value={workflowMeta.dateEffective.slice(0, 16)}
+            onChange={(e) =>
+              setWorkflowMeta({
+                ...workflowMeta,
+                dateEffective: new Date(e.target.value).toISOString(),
+              })
+            }
+            style={{
+              padding: "8px",
+              borderRadius: "5px",
+              border: "1px solid #ccc",
+            }}
+          />
+
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-evenly",
+              marginTop: "20px",
+            }}
+          >
+            <button
+              onClick={handleMetaContinue}
+              style={{
+                padding: "10px 15px",
+                background: "#10b981",
+                color: "white",
+                border: "none",
+                borderRadius: "5px",
+                cursor: "pointer",
+              }}
+            >
+              Continue
+            </button>
+            <button
+              onClick={() => setMetaModalOpen(false)}
+              style={{
+                padding: "10px 15px",
+                background: "#e74c3c",
+                color: "white",
+                border: "none",
+                borderRadius: "5px",
+                cursor: "pointer",
+              }}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </Modal>
+      {/* Modal for Loading the Workflow */}
+      <Modal
+        isOpen={loadWorkflowModalOpen}
+        onRequestClose={() => setLoadWorkflowModalOpen(false)}
+        style={{
+          content: {
+            width: "30%",
+            height: "35%",
+            margin: "auto",
+            padding: "15px",
+            borderRadius: "10px",
+            boxShadow: "0 4px 10px rgba(0, 0, 0, 0.3)",
+          },
+        }}
+      >
+        <h3 style={{ textAlign: "center", marginBottom: "20px" }}>Load Workflow</h3>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: "15px" }}>
+          <label style={{ fontWeight: "bold" }}>Select Workflow:</label>
+          <Select
+            options={allWorkflows.map((wf) => ({
+              value: wf.Id,
+              label: `${wf.Name} - ${wf.Description}`,
+              data: wf,
+            }))}
+            value={selectedWorkflowToLoad}
+            onChange={(selected) => setSelectedWorkflowToLoad(selected)}
+          />
+
+          <div style={{ display: "flex", justifyContent: "space-evenly", marginTop: "20px" }}>
+            <button
+              onClick={async () => {
+                if (!selectedWorkflowToLoad) return;
+                const workflowId = selectedWorkflowToLoad.value;
+                try {
+                  const response = await fetch(`${loadWorkflow}/${workflowId}`);
+                  const data = await response.json();
+                  console.log("responsedata", data);
+                  if (data?.Workflow?.Steps?.length > 0) {
+                    convertJsonToWorkflow(data);
+                    setWorkflowMeta({
+                      name: data.Workflow.Name || "",
+                      description: data.Workflow.Description || "",
+                      dateEffective: data.Workflow.DateEffective || new Date().toISOString(),
+                    });
+                    setSelectedWorkflowOption({
+                      label: `${data.Workflow.Name} - ${data.Workflow.Description}`,
+                      value: data.Workflow.Id,
+                      data: data.Workflow,
+                    });
+                    //alert("📥 Workflow loaded successfully!");
+                    setLoadWorkflowModalOpen(false);
+                  } else {
+                    alert("⚠️ No workflow data found.");
+                  }
+                } catch (error) {
+                  console.error("Error loading workflow:", error);
+                  alert("🚨 Error occurred while loading workflow.");
+                }
+              }}
+              style={{
+                padding: "10px 15px",
+                background: "#10b981",
+                color: "white",
+                border: "none",
+                borderRadius: "5px",
+                cursor: "pointer",
+              }}
+            >
+              Load
+            </button>
+            <button
+              onClick={() => setLoadWorkflowModalOpen(false)}
+              style={{
+                padding: "10px 15px",
+                background: "#e74c3c",
+                color: "white",
+                border: "none",
+                borderRadius: "5px",
+                cursor: "pointer",
+              }}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </Modal>
+    </div >
+  );
+
+};
+const buttonStyle = {
+  background: "#f1f5f9",
+  border: "1px solid #cbd5e1",
+  borderRadius: "6px",
+  padding: "6px 8px",
+  cursor: "pointer",
+  fontSize: "14px",
+  transition: "transform 0.2s ease",
+};
+export default WorkflowEditor;
