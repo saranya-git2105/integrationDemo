@@ -1,4 +1,3 @@
-
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
@@ -28,3 +27,7 @@ window.reactwidget = {
 };
 
 reportWebVitals();
+
+if (process.env.NODE_ENV === "development") {
+  window.reactwidget.initialise();
+}
