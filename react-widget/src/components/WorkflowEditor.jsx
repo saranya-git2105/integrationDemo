@@ -1557,18 +1557,28 @@ const WorkflowEditor = ({ config = { nodeTypes: {}, buttons: {} }, apiUrls = {} 
                     x: nodeContextMenu.node.position.x + 200,
                     y: nodeContextMenu.node.position.y + 100,
                   },
-                  data: { label: "Step", properties: {} },
+                  data: { 
+                    label: "Step", 
+                    properties: {},
+                    nodeShape: "Step"
+                  },
                 };
                 const newEdge = {
                   id: `${nodeContextMenu.node.id}-${newNodeId}`,
                   source: nodeContextMenu.node.id,
                   target: newNodeId,
+                  sourceHandle: "Step-right-source",
+                  targetHandle: "Step-left-target",
                   label: "Forward",
                   animated: false,
                   markerEnd: { type: MarkerType.ArrowClosed },
                   style: { stroke: "#2980b9", strokeWidth: 2 },
+                  data: {
+                    shortPurposeForward: "",
+                    purposeForForward: " ",
+                  },
                 };
-
+                addToUndoStack();
                 setNodes((nds) => [...nds, newNode]);
                 setEdges((eds) => [...eds, newEdge]);
                 setNodeContextMenu(null);
