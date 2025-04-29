@@ -1341,6 +1341,8 @@ const WorkflowEditor = ({ config = { nodeTypes: {}, buttons: {} }, apiUrls = {} 
               zIndex: 1000,
               minWidth: "250px",
               cursor: isDraggingEdgeMenu ? "grabbing" : "grab",
+              borderRadius: "8px",
+              boxShadow: "0 4px 8px rgba(0,0,0,0.1)"
             }}
             onMouseDown={(e) => {
               setIsDraggingEdgeMenu(true);
@@ -1486,6 +1488,8 @@ const WorkflowEditor = ({ config = { nodeTypes: {}, buttons: {} }, apiUrls = {} 
               zIndex: 1000,
               minWidth: "140px",
               cursor: isDraggingNodeMenu ? "grabbing" : "grab",
+              borderRadius: "8px",
+              boxShadow: "0 4px 8px rgba(0,0,0,0.1)"
             }}
             onMouseDown={(e) => {
               setIsDraggingNodeMenu(true);
