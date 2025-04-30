@@ -970,6 +970,34 @@ const WorkflowEditor = ({ config = { nodeTypes: {}, buttons: {} }, apiUrls = {} 
   const memoizedNodes = useMemo(() => {
     return nodes.map((n) => ({ ...n, draggable: !isLocked }));
   }, [nodes, isLocked]);
+
+  // Consistent styles for all modals
+  const modalStyles = {
+    header: {
+      textAlign: "center",
+      marginBottom: "15px",
+      fontWeight: "bold",
+      fontSize: "20px",
+      color: "#1e293b"
+    },
+    label: {
+      fontWeight: "bold",
+      fontSize: "14px",
+      color: "#374151"
+    },
+    input: {
+      fontSize: "14px",
+      padding: "8px",
+      borderRadius: "5px",
+      border: "1px solid #ccc",
+      width: "100%"
+    },
+    content: {
+      fontSize: "14px",
+      color: "#374151"
+    }
+  };
+
   return (
     <div style={{ paddingTop: "0px", height: "100vh", width: "100vw", display: "flex", background: "#e2e8f0" }}>
       {/* Sidebar Menu */}
@@ -1635,32 +1663,41 @@ const WorkflowEditor = ({ config = { nodeTypes: {}, buttons: {} }, apiUrls = {} 
         style={{
           content: {
             width: "30%",
+            minHeight: "400px",
+            maxHeight: "80vh",
             margin: "auto",
             padding: "15px",
             borderRadius: "10px",
             boxShadow: "0 4px 10px rgba(0, 0, 0, 0.3)",
+            overflow: "hidden",
+            display: "flex",
+            flexDirection: "column"
           },
+          overlay: {
+            backgroundColor: "rgba(0, 0, 0, 0.5)"
+          }
         }}
       >
-        <h2 style={{ textAlign: "center", marginBottom: "15px" }}>
-          Node Properties
-        </h2>
+        <h2 style={modalStyles.header}>Node Properties</h2>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+        <div style={{ 
+          display: "flex", 
+          flexDirection: "column", 
+          gap: "12px",
+          overflowY: "auto",
+          paddingRight: "10px",
+          flex: 1
+        }}>
           {/* Description Field */}
-          <label style={{ fontWeight: "bold" }}>Description (Step Name):</label>
+          <label style={modalStyles.label}>Description (Step Name):</label>
           <input
             type="text"
             name="stepName"
             value={nodeProperties.stepName || ""}
             onChange={updateNodeProperties}
-            style={{
-              padding: "8px",
-              borderRadius: "5px",
-              border: "1px solid #ccc",
-            }}
+            style={{ ...modalStyles.input, width: "95%" }}
           />
-          <label style={{ fontWeight: "bold" }}>Role:</label>
+          <label style={modalStyles.label}>Role:</label>
           <Select
             options={[
               { label: "HR", value: "HR" },
@@ -1678,9 +1715,19 @@ const WorkflowEditor = ({ config = { nodeTypes: {}, buttons: {} }, apiUrls = {} 
                 role: selected.value,
               }))
             }
+            styles={{
+              control: (base) => ({
+                ...base,
+                fontSize: "14px"
+              }),
+              option: (base) => ({
+                ...base,
+                fontSize: "14px"
+              })
+            }}
           />
           {/* Step Actions Multi-Select */}
-          <label style={{ fontWeight: "bold" }}>Step Actions:</label>
+          <label style={modalStyles.label}>Step Actions:</label>
           <Select
             isMulti
             options={stepOptionsFormatted}
@@ -1693,9 +1740,19 @@ const WorkflowEditor = ({ config = { nodeTypes: {}, buttons: {} }, apiUrls = {} 
                 stepActions: selected ? selected.map((item) => item.value) : [],
               }))
             }
+            styles={{
+              control: (base) => ({
+                ...base,
+                fontSize: "14px"
+              }),
+              option: (base) => ({
+                ...base,
+                fontSize: "14px"
+              })
+            }}
           />
           {/* Common Actions Multi-Select */}
-          <label style={{ fontWeight: "bold" }}>Common Actions:</label>
+          <label style={modalStyles.label}>Common Actions:</label>
           <Select
             isMulti
             options={commonOptionsFormatted}
@@ -1710,6 +1767,16 @@ const WorkflowEditor = ({ config = { nodeTypes: {}, buttons: {} }, apiUrls = {} 
                 commonActions: selected ? selected.map((item) => item.value) : [],
               }))
             }
+            styles={{
+              control: (base) => ({
+                ...base,
+                fontSize: "14px"
+              }),
+              option: (base) => ({
+                ...base,
+                fontSize: "14px"
+              })
+            }}
           />
 
           {/* Buttons */}
@@ -1723,12 +1790,9 @@ const WorkflowEditor = ({ config = { nodeTypes: {}, buttons: {} }, apiUrls = {} 
             <button
               onClick={saveNodeProperties}
               style={{
-                padding: "10px 15px",
+                ...modalButtonStyle,
                 background: "#3498db",
-                color: "white",
-                border: "none",
-                borderRadius: "5px",
-                cursor: "pointer",
+                color: "white"
               }}
             >
               Save
@@ -1736,12 +1800,9 @@ const WorkflowEditor = ({ config = { nodeTypes: {}, buttons: {} }, apiUrls = {} 
             <button
               onClick={() => setModalIsOpen(false)}
               style={{
-                padding: "10px 15px",
+                ...modalButtonStyle,
                 background: "#e74c3c",
-                color: "white",
-                border: "none",
-                borderRadius: "5px",
-                cursor: "pointer",
+                color: "white"
               }}
             >
               Cancel
@@ -1754,11 +1815,35 @@ const WorkflowEditor = ({ config = { nodeTypes: {}, buttons: {} }, apiUrls = {} 
       <Modal
         isOpen={modalIsOpen1}
         onRequestClose={() => setModalIsOpen1(false)}
-        style={{ content: { width: "50%", margin: "auto" } }}
+        style={{
+          content: {
+            width: "50%",
+            margin: "auto",
+            padding: "15px",
+            borderRadius: "10px",
+            boxShadow: "0 4px 10px rgba(0, 0, 0, 0.3)",
+            minHeight: "400px",
+            maxHeight: "80vh",
+            overflow: "hidden",
+            display: "flex",
+            flexDirection: "column"
+          },
+          overlay: {
+            backgroundColor: "rgba(0, 0, 0, 0.5)"
+          }
+        }}
       >
-        <h2>Workflow JSON</h2>
-        <pre>{jsonData}</pre>
-        <button onClick={() => setModalIsOpen1(false)}>Close</button>
+        <h2 style={modalStyles.header}>Workflow JSON</h2>
+        <div style={{ overflowY: "auto", flex: 1 }}>
+          <pre style={{ ...modalStyles.content, whiteSpace: "pre-wrap" }}>{jsonData}</pre>
+        </div>
+        <div style={{ marginTop: "20px", textAlign: "center" }}>
+          <button onClick={() => setModalIsOpen1(false)} style={{
+            ...modalButtonStyle,
+            background: "#e74c3c",
+            color: "white"
+          }}>Close</button>
+        </div>
       </Modal>
       {
         lockedToast && (
@@ -1788,22 +1873,34 @@ const WorkflowEditor = ({ config = { nodeTypes: {}, buttons: {} }, apiUrls = {} 
         style={{
           content: {
             width: "30%",
-            height: "80%",
+            minHeight: "400px",
+            maxHeight: "80vh",
             margin: "auto",
-            padding: "10px",
+            padding: "20px",
             borderRadius: "10px",
             boxShadow: "0 4px 10px rgba(0, 0, 0, 0.3)",
+            overflow: "hidden",
+            display: "flex",
+            flexDirection: "column"
           },
+          overlay: {
+            backgroundColor: "rgba(0, 0, 0, 0.5)"
+          }
         }}
       >
-        <h3 style={{ textAlign: "center", marginBottom: "10px" }}>
-          Workflow Details
-        </h3>
+        <h3 style={modalStyles.header}>Workflow Details</h3>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+        <div style={{ 
+          display: "flex", 
+          flexDirection: "column", 
+          gap: "15px",
+          overflowY: "auto",
+          flex: 1,
+          paddingRight: "10px"
+        }}>
           {pendingAction !== "create" && (
             <>
-              <label style={{ fontWeight: "bold" }}>Select Workflow:</label>
+              <label style={modalStyles.label}>Select Workflow:</label>
               <Select
                 options={workflowOptions}
                 value={selectedWorkflowOption}
@@ -1823,11 +1920,21 @@ const WorkflowEditor = ({ config = { nodeTypes: {}, buttons: {} }, apiUrls = {} 
                     });
                   }
                 }}
+                styles={{
+                  control: (base) => ({
+                    ...base,
+                    fontSize: "14px"
+                  }),
+                  option: (base) => ({
+                    ...base,
+                    fontSize: "14px"
+                  })
+                }}
               />
             </>
           )}
 
-          <label style={{ fontWeight: "bold" }}>Name:</label>
+          <label style={modalStyles.label}>Name:</label>
           <input
             type="text"
             maxLength={64}
@@ -1835,14 +1942,10 @@ const WorkflowEditor = ({ config = { nodeTypes: {}, buttons: {} }, apiUrls = {} 
             onChange={(e) =>
               setWorkflowMeta({ ...workflowMeta, name: e.target.value })
             }
-            style={{
-              padding: "8px",
-              borderRadius: "5px",
-              border: "1px solid #ccc",
-            }}
+            style={modalStyles.input}
           />
 
-          <label style={{ fontWeight: "bold" }}>Description:</label>
+          <label style={modalStyles.label}>Description:</label>
           <textarea
             maxLength={256}
             value={workflowMeta.description}
@@ -1853,14 +1956,13 @@ const WorkflowEditor = ({ config = { nodeTypes: {}, buttons: {} }, apiUrls = {} 
               })
             }
             style={{
-              padding: "8px",
-              borderRadius: "5px",
-              border: "1px solid #ccc",
+              ...modalStyles.input,
               height: "60px",
+              resize: "vertical"
             }}
           />
 
-          <label style={{ fontWeight: "bold" }}>Effective Date:</label>
+          <label style={modalStyles.label}>Effective Date:</label>
           <input
             type="datetime-local"
             value={workflowMeta.dateEffective.slice(0, 16)}
@@ -1870,47 +1972,35 @@ const WorkflowEditor = ({ config = { nodeTypes: {}, buttons: {} }, apiUrls = {} 
                 dateEffective: new Date(e.target.value).toISOString(),
               })
             }
-            style={{
-              padding: "8px",
-              borderRadius: "5px",
-              border: "1px solid #ccc",
-            }}
+            style={modalStyles.input}
           />
+        </div>
 
-          <div
+        <div style={{
+          display: "flex",
+          justifyContent: "space-evenly",
+          marginTop: "20px",
+        }}>
+          <button
+            onClick={handleMetaContinue}
             style={{
-              display: "flex",
-              justifyContent: "space-evenly",
-              marginTop: "20px",
+              ...modalButtonStyle,
+              background: "#10b981",
+              color: "white"
             }}
           >
-            <button
-              onClick={handleMetaContinue}
-              style={{
-                padding: "10px 15px",
-                background: "#10b981",
-                color: "white",
-                border: "none",
-                borderRadius: "5px",
-                cursor: "pointer",
-              }}
-            >
-              Continue
-            </button>
-            <button
-              onClick={() => setMetaModalOpen(false)}
-              style={{
-                padding: "10px 15px",
-                background: "#e74c3c",
-                color: "white",
-                border: "none",
-                borderRadius: "5px",
-                cursor: "pointer",
-              }}
-            >
-              Cancel
-            </button>
-          </div>
+            Continue
+          </button>
+          <button
+            onClick={() => setMetaModalOpen(false)}
+            style={{
+              ...modalButtonStyle,
+              background: "#e74c3c",
+              color: "white"
+            }}
+          >
+            Cancel
+          </button>
         </div>
       </Modal>
       {/* Modal for Loading the Workflow */}
@@ -1920,18 +2010,32 @@ const WorkflowEditor = ({ config = { nodeTypes: {}, buttons: {} }, apiUrls = {} 
         style={{
           content: {
             width: "30%",
-            height: "35%",
+            minHeight: "200px",
+            maxHeight: "40vh",
             margin: "auto",
-            padding: "15px",
+            padding: "20px",
             borderRadius: "10px",
             boxShadow: "0 4px 10px rgba(0, 0, 0, 0.3)",
+            overflow: "hidden",
+            display: "flex",
+            flexDirection: "column"
           },
+          overlay: {
+            backgroundColor: "rgba(0, 0, 0, 0.5)"
+          }
         }}
       >
-        <h3 style={{ textAlign: "center", marginBottom: "20px" }}>Load Workflow</h3>
+        <h3 style={modalStyles.header}>Load Workflow</h3>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: "15px" }}>
-          <label style={{ fontWeight: "bold" }}>Select Workflow:</label>
+        <div style={{ 
+          display: "flex", 
+          flexDirection: "column", 
+          gap: "15px",
+          overflowY: "auto",
+          flex: 1,
+          paddingRight: "10px"
+        }}>
+          <label style={modalStyles.label}>Select Workflow:</label>
           <Select
             options={allWorkflows.map((wf) => ({
               value: wf.Id,
@@ -1940,64 +2044,75 @@ const WorkflowEditor = ({ config = { nodeTypes: {}, buttons: {} }, apiUrls = {} 
             }))}
             value={selectedWorkflowToLoad}
             onChange={(selected) => setSelectedWorkflowToLoad(selected)}
+            styles={{
+              control: (base) => ({
+                ...base,
+                fontSize: "14px"
+              }),
+              option: (base) => ({
+                ...base,
+                fontSize: "14px"
+              }),
+              menuPortal: (base) => ({ ...base, zIndex: 9999 })
+            }}
+            menuPortalTarget={typeof window !== 'undefined' ? document.body : null}
+            menuPosition="fixed"
           />
+        </div>
 
-          <div style={{ display: "flex", justifyContent: "space-evenly", marginTop: "20px" }}>
-            <button
-              onClick={async () => {
-                if (!selectedWorkflowToLoad) return;
-                const workflowId = selectedWorkflowToLoad.value;
-                try {
-                  const response = await fetch(`${loadWorkflow}/${workflowId}`);
-                  const data = await response.json();
-                  console.log("responsedata", data);
-                  if (data?.Workflow?.Steps?.length > 0) {
-                    convertJsonToWorkflow(data);
-                    setWorkflowMeta({
-                      name: data.Workflow.Name || "",
-                      description: data.Workflow.Description || "",
-                      dateEffective: data.Workflow.DateEffective || new Date().toISOString(),
-                    });
-                    setSelectedWorkflowOption({
-                      label: `${data.Workflow.Name} - ${data.Workflow.Description}`,
-                      value: data.Workflow.Id,
-                      data: data.Workflow,
-                    });
-                    //alert("📥 Workflow loaded successfully!");
-                    setLoadWorkflowModalOpen(false);
-                  } else {
-                    alert("⚠️ No workflow data found.");
-                  }
-                } catch (error) {
-                  console.error("Error loading workflow:", error);
-                  alert("🚨 Error occurred while loading workflow.");
+        <div style={{
+          display: "flex",
+          justifyContent: "space-evenly",
+          marginTop: "20px",
+        }}>
+          <button
+            onClick={async () => {
+              if (!selectedWorkflowToLoad) return;
+              const workflowId = selectedWorkflowToLoad.value;
+              try {
+                const response = await fetch(`${loadWorkflow}/${workflowId}`);
+                const data = await response.json();
+                console.log("responsedata", data);
+                if (data?.Workflow?.Steps?.length > 0) {
+                  convertJsonToWorkflow(data);
+                  setWorkflowMeta({
+                    name: data.Workflow.Name || "",
+                    description: data.Workflow.Description || "",
+                    dateEffective: data.Workflow.DateEffective || new Date().toISOString(),
+                  });
+                  setSelectedWorkflowOption({
+                    label: `${data.Workflow.Name} - ${data.Workflow.Description}`,
+                    value: data.Workflow.Id,
+                    data: data.Workflow,
+                  });
+                  //alert("📥 Workflow loaded successfully!");
+                  setLoadWorkflowModalOpen(false);
+                } else {
+                  alert("⚠️ No workflow data found.");
                 }
-              }}
-              style={{
-                padding: "10px 15px",
-                background: "#10b981",
-                color: "white",
-                border: "none",
-                borderRadius: "5px",
-                cursor: "pointer",
-              }}
-            >
-              Load
-            </button>
-            <button
-              onClick={() => setLoadWorkflowModalOpen(false)}
-              style={{
-                padding: "10px 15px",
-                background: "#e74c3c",
-                color: "white",
-                border: "none",
-                borderRadius: "5px",
-                cursor: "pointer",
-              }}
-            >
-              Cancel
-            </button>
-          </div>
+              } catch (error) {
+                console.error("Error loading workflow:", error);
+                alert("🚨 Error occurred while loading workflow.");
+              }
+            }}
+            style={{
+              ...modalButtonStyle,
+              background: "#10b981",
+              color: "white"
+            }}
+          >
+            Load
+          </button>
+          <button
+            onClick={() => setLoadWorkflowModalOpen(false)}
+            style={{
+              ...modalButtonStyle,
+              background: "#e74c3c",
+              color: "white"
+            }}
+          >
+            Cancel
+          </button>
         </div>
       </Modal>
     </div >
@@ -2013,4 +2128,17 @@ const buttonStyle = {
   fontSize: "14px",
   transition: "transform 0.2s ease",
 };
+
+// Consistent style for all modal buttons
+const modalButtonStyle = {
+  height: "40px",
+  minWidth: "110px",
+  padding: "10px 15px",
+  fontSize: "14px",
+  fontWeight: "500",
+  border: "none",
+  borderRadius: "5px",
+  cursor: "pointer"
+};
+
 export default WorkflowEditor;
