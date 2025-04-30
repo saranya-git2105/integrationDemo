@@ -701,14 +701,20 @@ const WorkflowEditor = ({ config = { nodeTypes: {}, buttons: {} }, apiUrls = {} 
   useEffect(() => {
     const closeMenus = (e) => {
       const edgeMenu = document.getElementById("edge-context-menu");
+      const nodeMenu = document.querySelector("[data-node-context-menu]");
+      
+      // Don't close if we're dragging or if click is inside menus
+      if (isDraggingNodeMenu || isDraggingEdgeMenu) return;
       if (edgeMenu && edgeMenu.contains(e.target)) return;
+      if (nodeMenu && nodeMenu.contains(e.target)) return;
+      
       setContextMenu(null);
       setNodeContextMenu(null);
     };
 
     window.addEventListener("click", closeMenus);
     return () => window.removeEventListener("click", closeMenus);
-  }, []);
+  }, [isDraggingNodeMenu, isDraggingEdgeMenu]);
 
   //handle node right click
 
@@ -981,7 +987,6 @@ const WorkflowEditor = ({ config = { nodeTypes: {}, buttons: {} }, apiUrls = {} 
         flexShrink: 0, // Prevent it from shrinking
         position: "relative",
       }}>
-
         <h4
           style={{
             margin: "0 0 12px",
@@ -1366,21 +1371,7 @@ const WorkflowEditor = ({ config = { nodeTypes: {}, buttons: {} }, apiUrls = {} 
               setIsDraggingEdgeMenu(false);
             }}
           >
-            <label style={{ marginTop: "15px", display: "block", marginBottom: "5px" }}>
-              Select Edge Action:
-            </label>
-            <Select
-              options={[
-                { label: "Approve", value: "Approve" },
-                { label: "Reject", value: "Reject" },
-                { label: "Review", value: "Review" },
-                { label: "Send Back", value: "Send Back" },
-                { label: "Forward", value: "Forward" },
-                { label: "Save", value: "Save" },
-              ]}
-              value={{ label: selectedEdge.label, value: selectedEdge.label }}
-              onChange={(selected) => updateEdgeLabel(selected.value)}
-            />
+           
 
             <div style={{ marginTop: "10px" }}>
               {/* Short Purpose */}
@@ -1458,6 +1449,21 @@ const WorkflowEditor = ({ config = { nodeTypes: {}, buttons: {} }, apiUrls = {} 
                   width: "90%",
                 }}
               />
+               <label style={{ marginTop: "15px", display: "block", marginBottom: "5px" }}>
+              Select Edge Action:
+            </label>
+            <Select
+              options={[
+                { label: "Approve", value: "Approve" },
+                { label: "Reject", value: "Reject" },
+                { label: "Review", value: "Review" },
+                { label: "Send Back", value: "Send Back" },
+                { label: "Forward", value: "Forward" },
+                { label: "Save", value: "Save" },
+              ]}
+              value={{ label: selectedEdge.label, value: selectedEdge.label }}
+              onChange={(selected) => updateEdgeLabel(selected.value)}
+            />
             </div>
 
             <hr style={{ margin: "10px 0" }} />
@@ -1478,6 +1484,7 @@ const WorkflowEditor = ({ config = { nodeTypes: {}, buttons: {} }, apiUrls = {} 
       {
         !isLocked && nodeContextMenu && (
           <div
+            data-node-context-menu
             style={{
               position: "absolute",
               top: nodeMenuPosition.y,
