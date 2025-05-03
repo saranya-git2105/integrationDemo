@@ -908,12 +908,7 @@ const WorkflowEditor = ({ config = { nodeTypes: {}, buttons: {} }, apiUrls = {} 
     value: action.ActionName,
   }));
   const handleActionWithMeta = (actionType) => {
-    const startNodeExists = nodes.some((node) => node.data?.nodeShape === "Start");
-
-    if (!startNodeExists) {
-      alert("⚠️ Please drag and place a Start node first before saving or viewing the workflow.");
-      return;
-    }
+   
     if (actionType === "save") {
       if (!workflowMeta.name || !workflowMeta.description) {
         setPendingAction(actionType);
