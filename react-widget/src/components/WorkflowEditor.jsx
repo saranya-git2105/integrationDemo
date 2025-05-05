@@ -49,7 +49,7 @@ const WorkflowEditor = ({ config = { nodeTypes: {}, buttons: {} }, apiUrls = {} 
   const [allWorkflows, setAllWorkflows] = useState([]);
   const [selectedWorkflowOption, setSelectedWorkflowOption] = useState(null);
   const [stepActionsOptions, setStepActionsOptions] = useState([]);
-  const [commonActionsOptions, setCommonActionsOptions] = useState([]);
+  const [stepUsersOptions, setStepUsersOptions] = useState([]);
   const [workflowMeta, setWorkflowMeta] = useState({
     name: "",
     description: "",
@@ -75,6 +75,7 @@ const WorkflowEditor = ({ config = { nodeTypes: {}, buttons: {} }, apiUrls = {} 
   const [edgeMenuPosition, setEdgeMenuPosition] = useState({ x: 0, y: 0 });
   const [isDraggingEdgeMenu, setIsDraggingEdgeMenu] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const [workflowForm, setWorkflowForm] = useState(null);
   const sidebarNodeTypes = useMemo(() => (
     [
       { label: "Start", color: "#9fda7c", shape: "circle" },
@@ -83,6 +84,39 @@ const WorkflowEditor = ({ config = { nodeTypes: {}, buttons: {} }, apiUrls = {} 
       { label: "Decision", color: "#B388EB", shape: "diamond" },
     ].filter(({ label }) => config?.nodeTypes?.[label] !== false)
   ), [config]);
+
+  const handleActionWithMeta = useCallback((actionType) => {
+    console.log("NODES:", nodes);
+    const startNodeExists = nodes.some((node) => node.data?.nodeShape === "Start");
+
+    if (!startNodeExists && actionType !== "view") {
+      alert("⚠️ Please drag and place a Start node first before saving or viewing the workflow.");
+      return;
+    }
+    if (actionType === "save") {
+      if (!workflowMeta.name || !workflowMeta.description) {
+        setPendingAction(actionType);
+        setMetaModalOpen(true);
+        return;
+      }
+      saveWorkflowToAPI();
+      return;
+    }
+
+    if (actionType === "view") {
+      viewJson();
+      return;
+    }
+
+    if (actionType === "download") {
+      downloadJson();
+      return;
+    }
+    if (actionType === "create") {
+      handleCreateWorkflowClick();
+      return;
+    }
+  }, [nodes, workflowMeta, stepActionsOptions, stepUsersOptions, selectedWorkflowOption]);
 
   const sidebarButtons = useMemo(() => (
     [
@@ -96,25 +130,52 @@ const WorkflowEditor = ({ config = { nodeTypes: {}, buttons: {} }, apiUrls = {} 
 
   const {
     getActions = "",
+    getUsers = "",
     getWorkflows = "",
     saveWorkflow = "",
     loadWorkflow = ""
   } = apiUrls;
   useEffect(() => {
+    const storedForm = localStorage.getItem('workflowForm');
+    if (storedForm) {
+      try {
+        const parsedForm = JSON.parse(storedForm);
+        setWorkflowForm(parsedForm);
+        console.log("✅ Loaded form data from localStorage:", parsedForm);
+      } catch (err) {
+        console.error("🚨 Error parsing form data:", err);
+      }
+    }
+  }, []);
+  useEffect(() => {
     if (!getActions) return;
-    fetch(getActions)
+    fetch(getActions, {
+      headers: apiUrls?.headers || {}  // <-- use headers from apiUrls
+    })
       .then((res) => res.json())
       .then((data) => setStepActionsOptions(data))
       .catch((err) => console.error("Failed to fetch actions", err));
-  }, [getActions]);
+  }, [getActions, apiUrls?.headers]);
 
   useEffect(() => {
-    if (!getWorkflows) return;
-    fetch(getWorkflows)
-      .then((res) => res.json())
-      .then((data) => setAllWorkflows(data?.data || []))
-      .catch((err) => console.error("Failed to fetch workflows", err));
-  }, [getWorkflows]);
+  if (!getUsers) return;
+  fetch(getUsers, {
+    headers: apiUrls?.headers || {}
+  })
+    .then((res) => res.json())
+    .then((data) => setStepUsersOptions(data))
+    .catch((err) => console.error("Failed to fetch users", err));
+}, [getUsers, apiUrls?.headers]);
+
+useEffect(() => {
+  if (!getWorkflows) return;
+  fetch(getWorkflows, {
+    headers: apiUrls?.headers || {}
+  })
+    .then((res) => res.json())
+    .then((data) => setAllWorkflows(data?.data || []))
+    .catch((err) => console.error("Failed to fetch workflows", err));
+}, [getWorkflows, apiUrls?.headers]);
 
   useEffect(() => {
     if (selectedNode) {
@@ -123,7 +184,7 @@ const WorkflowEditor = ({ config = { nodeTypes: {}, buttons: {} }, apiUrls = {} 
       // Normalize property keys for the modal
       setNodeProperties({
         stepName: props.StepName || selectedNode.data.label,
-        role: props.Role || "",
+        //role: props.Role || "",
         purposeForForward: props.PurposeForForward || "",
         shortPurposeForForward: props.ShortPurposeForForward || "",
         stepActions: (props.StepActions || []).map(code => {
@@ -131,7 +192,7 @@ const WorkflowEditor = ({ config = { nodeTypes: {}, buttons: {} }, apiUrls = {} 
           return found?.ActionName || code; // fallback to code if not found
         }),
         commonActions: (props.CommonActions || []).map(code => {
-          const found = commonActionsOptions.find(action => action.ActionCode === code);
+          const found = stepUsersOptions.find(action => action.ActionCode === code);
           return found?.ActionName || code;
         }),
       });
@@ -235,7 +296,7 @@ const WorkflowEditor = ({ config = { nodeTypes: {}, buttons: {} }, apiUrls = {} 
     };
 
     const position = snapToGrid(rawPosition.x, rawPosition.y);
-    
+
     const newNode = {
       id: `${nodes.length + 1}`,
       type: "custom",
@@ -336,7 +397,7 @@ const WorkflowEditor = ({ config = { nodeTypes: {}, buttons: {} }, apiUrls = {} 
           nodeShape,
           properties: {
             StepName: isStop ? "Completed" : step.Properties?.StepName || stepCode,
-            Role: isStop ? "" : step.Properties?.Role || "",
+            //Role: isStop ? "" : step.Properties?.Role || "",
             PurposeForForward: isStop ? "" : step.Properties?.PurposeForForward || "",
             ShortPurposeForForward: isStop ? "" : step.Properties?.ShortPurposeForForward || "",
             StepActions: isStop ? [] : step.Properties?.StepActions || [],
@@ -520,6 +581,7 @@ const WorkflowEditor = ({ config = { nodeTypes: {}, buttons: {} }, apiUrls = {} 
   };
 
   const generateJson = (excludeStartStop = false) => {
+
     let nodesCopy = [...nodes];
     let edgesCopy = [...edges];
 
@@ -613,66 +675,60 @@ const WorkflowEditor = ({ config = { nodeTypes: {}, buttons: {} }, apiUrls = {} 
 
     // Build JSON
     const jsonOutput = {
-      workflow: {
-        Name: workflowMeta.name || "Untitled Workflow",
-        Description: workflowMeta.description || "",
-        DateEffective: workflowMeta.dateEffective,
-        steps: sortedNodes.map((node) => {
-          const props = node.data.properties || {};
-          const outgoingEdges = edges.filter((e) => e.source === node.id);
+      WorkFlowName: workflowForm.WorkFlowName || "Untitled Workflow",
+      ModuleId: workflowForm.ModuleId || "",
+      ProjectId: workflowForm.ProjectId || "",
+      RDLCTypeId: workflowForm.RDLCTypeId || "",
+      //Description: workflowMeta.description || "",
+      DateEffective: workflowForm.DateEffective,
+      WorkFlowSteps: sortedNodes.map((node) => {
+        const props = node.data.properties || {};
+        const outgoingEdges = edges.filter((e) => e.source === node.id);
 
-          const resolveAction = (actionName) =>
-            [...stepActionsOptions, ...commonActionsOptions].find(
-              (act) => act.ActionName === actionName
-            );
+        const resolveAction = (actionName) =>
+          [...stepActionsOptions, ...stepUsersOptions].find(
+            (act) => act.ActionName === actionName
+          );
 
-          const AnchorActions = outgoingEdges
-            .filter((edge) => stepCodeMap[edge.target] !== undefined)
-            .map((edge) => {
-              const action = resolveAction(edge.label);
-              return {
-                ActionName: action?.ActionName || edge.label,
-                ActionCode: action?.ActionCode || "null",
-                NextStep: stepCodeMap[edge.target],
-                ShortPurposeForForward: edge.data?.shortPurposeForForward || "",
-                PurposeForForward: edge.data?.purposeForForward || "",
-                FromHandleId: edge.sourceHandle || "",
-                ToHandleId: edge.targetHandle || "",
-              };
-            });
-          // 👇 Add this conditional properties based on nodeShape
-          let properties;
-          if (node.data.nodeShape === "Stop") {
-            properties = {
-              StepName: "Completed",
-              NodeShape: "Stop",
+        const WorkFlowStepTransistion = outgoingEdges
+          .filter((edge) => stepCodeMap[edge.target] !== undefined)
+          .map((edge) => {
+            const action = resolveAction(edge.label);
+            return {
+              //ActionName: action?.ActionName || edge.label,
+              //ActionCode: action?.ActionCode || "null",
+              NextStep: stepCodeMap[edge.target],
+              //ShortPurposeForForward: edge.data?.shortPurposeForForward || "",
+              //PurposeForForward: edge.data?.purposeForForward || "",
+              FromHandleId: edge.sourceHandle || "",
+              ToHandleId: edge.targetHandle || "",
             };
-          } else {
-            properties = {
-              StepName: node.data.label,
-              Role: props.Role || "",
-              PurposeForForward: props.PurposeForForward || "",
-              ShortPurposeForForward: props.ShortPurposeForForward || "",
-              StepActions: (props.StepActions || []).map((name) => {
-                const action = stepActionsOptions.find((a) => a.ActionName === name);
-                return action?.ActionCode || name;
-              }),
-              CommonActions: (props.CommonActions || []).map((name) => {
-                const action = commonActionsOptions.find((a) => a.ActionName === name);
-                return action?.ActionCode || name;
-              }),
-              NodeShape: node.data.nodeShape || "",
-            };
-          }
+          });
+        // 👇 Add this conditional properties based on nodeShape
+        return {
+          StepCode: stepCodeMap[node.id],
+          StepName: node.data.nodeShape === "Stop" ? "Completed" : node.data.label,
+          WorkFlowStepAction: (props.StepActions || []).map((name) => {
+            const action = stepActionsOptions.find((a) => a.ActionName === name);
+            return action?.ActionCode || name;
+          }),
+          WorkFlowStepUser: (props.CommonActions || []).map((name) => {
+            const action = stepUsersOptions.find((a) => a.ActionName === name);
+            return action?.ActionCode || name;
+          }),
 
-          return {
-            StepCode: stepCodeMap[node.id],
-            Properties: properties,
-            Position: node.position,
-            AnchorActions,
-          };
-        }),
-      },
+
+          WorkFlowStepTransistion,
+          Position: node.position,
+          Properties: {
+            //Role: props.Role || "",
+            PurposeForForward: props.PurposeForForward || "",
+            ShortPurposeForForward: props.ShortPurposeForForward || "",
+            NodeShape: node.data.nodeShape || "",
+          },
+        };
+      }),
+
     };
 
     console.log("✅ Generated JSON:", jsonOutput);
@@ -702,12 +758,12 @@ const WorkflowEditor = ({ config = { nodeTypes: {}, buttons: {} }, apiUrls = {} 
     const closeMenus = (e) => {
       const edgeMenu = document.getElementById("edge-context-menu");
       const nodeMenu = document.querySelector("[data-node-context-menu]");
-      
+
       // Don't close if we're dragging or if click is inside menus
       if (isDraggingNodeMenu || isDraggingEdgeMenu) return;
       if (edgeMenu && edgeMenu.contains(e.target)) return;
       if (nodeMenu && nodeMenu.contains(e.target)) return;
-      
+
       setContextMenu(null);
       setNodeContextMenu(null);
     };
@@ -744,7 +800,7 @@ const WorkflowEditor = ({ config = { nodeTypes: {}, buttons: {} }, apiUrls = {} 
     // Normalize keys for modal
     const normalizedProps = {
       stepName: props.StepName || node.data.label,
-      role: props.Role || "",
+      //role: props.Role || "",
       stepActions: props.StepActions || [],
       commonActions: props.CommonActions || [],
       purposeForForward: props.PurposeForForward || "",
@@ -785,7 +841,7 @@ const WorkflowEditor = ({ config = { nodeTypes: {}, buttons: {} }, apiUrls = {} 
               label: nodeProperties.stepName || n.data.label,
               properties: {
                 StepName: nodeProperties.stepName || "",
-                Role: nodeProperties.role || "",
+                //Role: nodeProperties.role || "",
                 PurposeForForward: nodeProperties.purposeForForward || "",
                 ShortPurposeForForward: nodeProperties.shortPurposeForForward || "",
                 StepActions: nodeProperties.stepActions || [],
@@ -825,7 +881,7 @@ const WorkflowEditor = ({ config = { nodeTypes: {}, buttons: {} }, apiUrls = {} 
       const response = await fetch(saveWorkflow, {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
+          ...apiUrls?.headers,
         },
         body: JSON.stringify(workflowJson),
       });
@@ -903,37 +959,10 @@ const WorkflowEditor = ({ config = { nodeTypes: {}, buttons: {} }, apiUrls = {} 
     value: action.ActionName,
   }));
 
-  const commonOptionsFormatted = commonActionsOptions.map((action) => ({
+  const commonOptionsFormatted = stepUsersOptions.map((action) => ({
     label: action.ActionName,
     value: action.ActionName,
   }));
-  const handleActionWithMeta = (actionType) => {
-   
-    if (actionType === "save") {
-      if (!workflowMeta.name || !workflowMeta.description) {
-        setPendingAction(actionType);
-        setMetaModalOpen(true);
-        return;
-      }
-      saveWorkflowToAPI();
-      return;
-    }
-
-    if (actionType === "view") {
-      viewJson();
-      return;
-    }
-
-    if (actionType === "download") {
-      downloadJson();
-      return;
-    }
-    if (actionType === "create") {
-      handleCreateWorkflowClick();
-      return;
-    }
-  };
-
   const handleMetaContinue = () => {
     setMetaModalOpen(false);
     if (pendingAction === "save") {
@@ -992,6 +1021,10 @@ const WorkflowEditor = ({ config = { nodeTypes: {}, buttons: {} }, apiUrls = {} 
       color: "#374151"
     }
   };
+
+  useEffect(() => {
+    console.log("Current nodes state:", nodes);
+  }, [nodes]);
 
   return (
     <div style={{ paddingTop: "0px", height: "100vh", width: "100vw", display: "flex", background: "#e2e8f0" }}>
@@ -1063,7 +1096,7 @@ const WorkflowEditor = ({ config = { nodeTypes: {}, buttons: {} }, apiUrls = {} 
             <FiRefreshCw size={12} color="#1e293b" />
           </div>
         </div>
-        {/* File Upload */}
+        {/* File Upload 
         <input
           type="file"
           accept="application/json"
@@ -1077,35 +1110,35 @@ const WorkflowEditor = ({ config = { nodeTypes: {}, buttons: {} }, apiUrls = {} 
             borderRadius: "6px",
             cursor: "pointer",
           }}
-        />
+        />*/}
 
         {/* Node Types */}
 
-        {config?.buttons?.create !== false && (
-          <div style={{ background: "#ffffff", padding: "10px", borderRadius: "10px", border: "1px solid #cbd5e1" }}>
-            <p style={{ fontWeight: "bold", margin: "5px 0", color: "#0ea5e9", fontSize: "12px" }}>🧱 Node Types</p>
-            {sidebarNodeTypes.map(({ label, color, shape }) => (
+
+        <div style={{ background: "#ffffff", padding: "10px", borderRadius: "10px", border: "1px solid #cbd5e1" }}>
+          <p style={{ fontWeight: "bold", margin: "5px 0", color: "#0ea5e9", fontSize: "12px" }}>🧱 Node Types</p>
+          {sidebarNodeTypes.map(({ label, color, shape }) => (
+            <div
+              key={label}
+              style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "14px", cursor: "grab" }}
+            >
+              <span style={{ fontSize: "13px" }}>{label}</span>
               <div
-                key={label}
-                style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "14px", cursor: "grab" }}
-              >
-                <span style={{ fontSize: "13px" }}>{label}</span>
-                <div
-                  draggable
-                  onDragStart={(e) => onDragStart(e, label)}
-                  style={{
-                    width: shape === "diamond" ? 20 : 20,
-                    height: shape === "diamond" ? 20 : 20,
-                    background: color,
-                    ...(shape === "circle" && { borderRadius: "50%" }),
-                    ...(shape === "diamond" && { transform: "rotate(45deg)" }),
-                    marginLeft: "10px",
-                  }}
-                />
-              </div>
-            ))}
-          </div>
-        )}
+                draggable
+                onDragStart={(e) => onDragStart(e, label)}
+                style={{
+                  width: shape === "diamond" ? 20 : 20,
+                  height: shape === "diamond" ? 20 : 20,
+                  background: color,
+                  ...(shape === "circle" && { borderRadius: "50%" }),
+                  ...(shape === "diamond" && { transform: "rotate(45deg)" }),
+                  marginLeft: "10px",
+                }}
+              />
+            </div>
+          ))}
+        </div>
+
 
         {/* Action Buttons */}
         {sidebarButtons.map(({ label, icon, action, color }) => (
@@ -1394,7 +1427,7 @@ const WorkflowEditor = ({ config = { nodeTypes: {}, buttons: {} }, apiUrls = {} 
               setIsDraggingEdgeMenu(false);
             }}
           >
-           
+
 
             <div style={{ marginTop: "10px" }}>
               {/* Short Purpose */}
@@ -1472,21 +1505,21 @@ const WorkflowEditor = ({ config = { nodeTypes: {}, buttons: {} }, apiUrls = {} 
                   width: "90%",
                 }}
               />
-               <label style={{ marginTop: "15px", display: "block", marginBottom: "5px" }}>
-              Select Edge Action:
-            </label>
-            <Select
-              options={[
-                { label: "Approve", value: "Approve" },
-                { label: "Reject", value: "Reject" },
-                { label: "Review", value: "Review" },
-                { label: "Send Back", value: "Send Back" },
-                { label: "Forward", value: "Forward" },
-                { label: "Save", value: "Save" },
-              ]}
-              value={{ label: selectedEdge.label, value: selectedEdge.label }}
-              onChange={(selected) => updateEdgeLabel(selected.value)}
-            />
+              <label style={{ marginTop: "15px", display: "block", marginBottom: "5px" }}>
+                Select Edge Action:
+              </label>
+              <Select
+                options={[
+                  { label: "Approve", value: "Approve" },
+                  { label: "Reject", value: "Reject" },
+                  { label: "Review", value: "Review" },
+                  { label: "Send Back", value: "Send Back" },
+                  { label: "Forward", value: "Forward" },
+                  { label: "Save", value: "Save" },
+                ]}
+                value={{ label: selectedEdge.label, value: selectedEdge.label }}
+                onChange={(selected) => updateEdgeLabel(selected.value)}
+              />
             </div>
 
             <hr style={{ margin: "10px 0" }} />
@@ -1591,8 +1624,8 @@ const WorkflowEditor = ({ config = { nodeTypes: {}, buttons: {} }, apiUrls = {} 
                     x: nodeContextMenu.node.position.x + 200,
                     y: nodeContextMenu.node.position.y + 100,
                   },
-                  data: { 
-                    label: "Step", 
+                  data: {
+                    label: "Step",
                     properties: {},
                     nodeShape: "Step"
                   },
@@ -1675,9 +1708,9 @@ const WorkflowEditor = ({ config = { nodeTypes: {}, buttons: {} }, apiUrls = {} 
       >
         <h2 style={modalStyles.header}>Node Properties</h2>
 
-        <div style={{ 
-          display: "flex", 
-          flexDirection: "column", 
+        <div style={{
+          display: "flex",
+          flexDirection: "column",
           gap: "12px",
           overflowY: "auto",
           paddingRight: "10px",
@@ -1692,7 +1725,7 @@ const WorkflowEditor = ({ config = { nodeTypes: {}, buttons: {} }, apiUrls = {} 
             onChange={updateNodeProperties}
             style={{ ...modalStyles.input, width: "95%" }}
           />
-          <label style={modalStyles.label}>Role:</label>
+          {/*<label style={modalStyles.label}>Role:</label>
           <Select
             options={[
               { label: "HR", value: "HR" },
@@ -1720,7 +1753,7 @@ const WorkflowEditor = ({ config = { nodeTypes: {}, buttons: {} }, apiUrls = {} 
                 fontSize: "14px"
               })
             }}
-          />
+          />*/}
           {/* Step Actions Multi-Select */}
           <label style={modalStyles.label}>Step Actions:</label>
           <Select
@@ -1747,7 +1780,7 @@ const WorkflowEditor = ({ config = { nodeTypes: {}, buttons: {} }, apiUrls = {} 
             }}
           />
           {/* Common Actions Multi-Select */}
-          <label style={modalStyles.label}>Common Actions:</label>
+          <label style={modalStyles.label}>Users:</label>
           <Select
             isMulti
             options={commonOptionsFormatted}
@@ -1885,9 +1918,9 @@ const WorkflowEditor = ({ config = { nodeTypes: {}, buttons: {} }, apiUrls = {} 
       >
         <h3 style={modalStyles.header}>Workflow Details</h3>
 
-        <div style={{ 
-          display: "flex", 
-          flexDirection: "column", 
+        <div style={{
+          display: "flex",
+          flexDirection: "column",
           gap: "15px",
           overflowY: "auto",
           flex: 1,
@@ -2022,9 +2055,9 @@ const WorkflowEditor = ({ config = { nodeTypes: {}, buttons: {} }, apiUrls = {} 
       >
         <h3 style={modalStyles.header}>Load Workflow</h3>
 
-        <div style={{ 
-          display: "flex", 
-          flexDirection: "column", 
+        <div style={{
+          display: "flex",
+          flexDirection: "column",
           gap: "15px",
           overflowY: "auto",
           flex: 1,
@@ -2065,7 +2098,12 @@ const WorkflowEditor = ({ config = { nodeTypes: {}, buttons: {} }, apiUrls = {} 
               if (!selectedWorkflowToLoad) return;
               const workflowId = selectedWorkflowToLoad.value;
               try {
-                const response = await fetch(`${loadWorkflow}/${workflowId}`);
+                const response = await fetch(`${loadWorkflow}/${workflowId}`, {
+                  method: "GET",
+                  headers: {
+                    ...apiUrls?.headers, // ✅ Inject headers from Angular
+                  },
+                });
                 const data = await response.json();
                 console.log("responsedata", data);
                 if (data?.Workflow?.Steps?.length > 0) {
