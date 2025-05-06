@@ -1,6 +1,7 @@
 <!-- Load Widget Button -->
 <button (click)="initializeReactWidget()">Load React Widget</button>
-<button (click)="openJsonModal()">View JSON</button>
+
+<button (click)="saveWorkflow()">Save Workflow</button>
 <!-- Fullscreen Toggle Button -->
 <div class="container">
   <button class="fullscreen-button" (click)="toggleFullscreen()">
@@ -9,12 +10,4 @@
 
   <!-- Your embedded React widget -->
   <react-widget></react-widget>
-</div>
-<!-- JSON Modal -->
-<div *ngIf="isJsonModalOpen" class="modal-backdrop">
-  <div class="modal-content">
-    <h3>Workflow JSON</h3>
-    <pre>{{ jsonContent }}</pre>
-    <button (click)="closeJsonModal()">Close</button>
-  </div>
 </div>

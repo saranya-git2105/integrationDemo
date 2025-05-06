@@ -29,24 +29,22 @@ export class AppComponent implements AfterViewInit {
       this.isFullscreen = !!document.fullscreenElement;
     });
   }
-  openJsonModal() {
-    const reactViewJson = (window as any).reactwidgetRef?.viewJson;
+  saveWorkflow() {
+    const reactViewJson = (window as any).reactwidgetRef?.SaveWorkflow;
+  
     if (typeof reactViewJson === 'function') {
-      reactViewJson(); // 🔁 Triggers React's JSON generation
+      reactViewJson(); // React generates and saves JSON in localStorage
     }
-
-    // Wait a moment for React to store the JSON
+  
     setTimeout(() => {
       const json = localStorage.getItem('workflowJson');
-      this.jsonContent = json ? JSON.stringify(JSON.parse(json), null, 2) : 'No JSON found';
-      this.isJsonModalOpen = true;
-    }, 300); // 300ms delay to ensure React has stored the JSON
-  }
-
-  closeJsonModal() {
-    this.isJsonModalOpen = false;
-  }
-
+      if (json) {
+        const parsed = JSON.parse(json);
+        console.log("📝 Workflow JSON from React:", parsed);
+    } // slight delay to ensure React has written to localStorage
+  },300);
+}
+ 
 
   initializeReactWidget() {
     const container = document.getElementById('react-widget-container');

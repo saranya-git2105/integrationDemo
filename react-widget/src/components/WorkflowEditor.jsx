@@ -94,7 +94,7 @@ const WorkflowEditor = forwardRef(({ config = { nodeTypes: {}, buttons: {} }, ap
       alert("⚠️ Please drag and place a Start node first before saving or viewing the workflow.");
       return;
     }
-    if (actionType === "save") {
+    /*if (actionType === "save") {
       if (!workflowMeta.name || !workflowMeta.description) {
         setPendingAction(actionType);
         setMetaModalOpen(true);
@@ -102,7 +102,7 @@ const WorkflowEditor = forwardRef(({ config = { nodeTypes: {}, buttons: {} }, ap
       }
       saveWorkflowToAPI();
       return;
-    }
+    }*/
 
     if (actionType === "view") {
       viewJson();
@@ -694,7 +694,7 @@ const WorkflowEditor = forwardRef(({ config = { nodeTypes: {}, buttons: {} }, ap
         style: { strokeWidth: 2, stroke: "#333" },
       });
 
-      startNode = newStartNode;
+      //startNode = newStartNode;
     }
 
     if (!startNode) {
@@ -810,12 +810,16 @@ const WorkflowEditor = forwardRef(({ config = { nodeTypes: {}, buttons: {} }, ap
       const formatted = JSON.stringify(json, null, 2);
       setJsonData(formatted);
       localStorage.setItem("workflowJson", formatted);
-      // Optionally show a modal: setModalIsOpen1(true);
+      setModalIsOpen1(true);
     }
   };
+  const SaveWorkflow =() =>{
+    const json = localStorage.getItem("workflowJson");
+    console.log("JSON from localStorage:", json);
+  }
   useImperativeHandle(ref, () => ({
     triggerViewJson: () => {
-      viewJson();
+      SaveWorkflow();
     }
   }));
 
@@ -943,7 +947,7 @@ const WorkflowEditor = forwardRef(({ config = { nodeTypes: {}, buttons: {} }, ap
     );
   };
   // Save current workflow JSON to backend
-  const saveWorkflowToAPI = async () => {
+  /*const saveWorkflowToAPI = async () => {
     // Validation: If any field is missing, show the meta modal
     if (!workflowMeta.name || !workflowMeta.description || !workflowMeta.dateEffective) {
       setPendingAction("save");
@@ -973,7 +977,7 @@ const WorkflowEditor = forwardRef(({ config = { nodeTypes: {}, buttons: {} }, ap
       console.error("Error saving workflow:", error);
       alert("🚨 Error occurred while saving workflow.");
     }
-  };
+  };*/
 
   // Load workflow from backend and render on canvas
   /*const loadWorkflow = async () => {
