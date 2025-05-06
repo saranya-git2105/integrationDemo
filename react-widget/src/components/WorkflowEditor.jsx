@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useMemo } from "react";
+import React, { useState, useCallback, useEffect, useMemo, useImperativeHandle, forwardRef, useRef } from "react";
 import ReactFlow, {
   addEdge,
   Controls,
@@ -20,11 +20,11 @@ import Select from "react-select";
 import { FiEye, FiDownload, FiRotateCw, FiPlusCircle, FiFolder, FiSave, FiRotateCcw, FiRefreshCw } from "react-icons/fi";
 import CanvasControls from "./CanvasControls"; // adjust path as needed
 
-Modal.setAppElement(document.body);
+Modal.setAppElement(document.querySelector('.container'));
 const nodeWidth = 150;
 const nodeHeight = 60;
 
-const WorkflowEditor = ({ config = { nodeTypes: {}, buttons: {} }, apiUrls = {} }) => {
+const WorkflowEditor = forwardRef(({ config = { nodeTypes: {}, buttons: {} }, apiUrls = {} }, props, ref) => {
   config = typeof config === "string" ? JSON.parse(config) : config;
   apiUrls = typeof apiUrls === "string" ? JSON.parse(apiUrls) : apiUrls;
   const { setViewport } = useReactFlow();
@@ -158,24 +158,24 @@ const WorkflowEditor = ({ config = { nodeTypes: {}, buttons: {} }, apiUrls = {} 
   }, [getActions, apiUrls?.headers]);
 
   useEffect(() => {
-  if (!getUsers) return;
-  fetch(getUsers, {
-    headers: apiUrls?.headers || {}
-  })
-    .then((res) => res.json())
-    .then((data) => setStepUsersOptions(data))
-    .catch((err) => console.error("Failed to fetch users", err));
-}, [getUsers, apiUrls?.headers]);
+    if (!getUsers) return;
+    fetch(getUsers, {
+      headers: apiUrls?.headers || {}
+    })
+      .then((res) => res.json())
+      .then((data) => setStepUsersOptions(data))
+      .catch((err) => console.error("Failed to fetch users", err));
+  }, [getUsers, apiUrls?.headers]);
 
-useEffect(() => {
-  if (!getWorkflows) return;
-  fetch(getWorkflows, {
-    headers: apiUrls?.headers || {}
-  })
-    .then((res) => res.json())
-    .then((data) => setAllWorkflows(data?.data || []))
-    .catch((err) => console.error("Failed to fetch workflows", err));
-}, [getWorkflows, apiUrls?.headers]);
+  useEffect(() => {
+    if (!getWorkflows) return;
+    fetch(getWorkflows, {
+      headers: apiUrls?.headers || {}
+    })
+      .then((res) => res.json())
+      .then((data) => setAllWorkflows(data?.data || []))
+      .catch((err) => console.error("Failed to fetch workflows", err));
+  }, [getWorkflows, apiUrls?.headers]);
 
   useEffect(() => {
     if (selectedNode) {
@@ -198,6 +198,12 @@ useEffect(() => {
       });
     }
   }, [selectedNode]);
+  useEffect(() => {
+    // Expose the method globally
+    window.reactwidgetRef = {
+      viewJson
+    };
+  }, []);
   const handleKeyDown = useCallback((e) => {
     const activeTag = document.activeElement?.tagName?.toLowerCase();
     const isInputFocused = ["input", "textarea", "select"].includes(activeTag);
@@ -732,6 +738,7 @@ useEffect(() => {
     };
 
     console.log("✅ Generated JSON:", jsonOutput);
+    localStorage.setItem("workflowJson", jsonOutput);
     return jsonOutput;
   };
 
@@ -739,8 +746,14 @@ useEffect(() => {
   // Function to show JSON in a modal
   const viewJson = () => {
     setJsonData(JSON.stringify(generateJson(false), null, 2));
+    localStorage.setItem("workflowJson", JSON.stringify(jsonData));
     setModalIsOpen1(true);
   };
+  useImperativeHandle(ref, () => ({
+    triggerViewJson: () => {
+      viewJson();
+    }
+  }));
 
   // Function to download JSON file
   const downloadJson = () => {
@@ -1688,6 +1701,7 @@ useEffect(() => {
       <Modal
         isOpen={modalIsOpen}
         onRequestClose={() => setModalIsOpen(false)}
+        parentSelector={() => document.querySelector('.container')}
         style={{
           content: {
             width: "30%",
@@ -1843,6 +1857,7 @@ useEffect(() => {
       <Modal
         isOpen={modalIsOpen1}
         onRequestClose={() => setModalIsOpen1(false)}
+        parentSelector={() => document.querySelector('.container')}
         style={{
           content: {
             width: "50%",
@@ -1898,6 +1913,7 @@ useEffect(() => {
       <Modal
         isOpen={metaModalOpen}
         onRequestClose={() => setMetaModalOpen(false)}
+        parentSelector={() => document.querySelector('.container')}
         style={{
           content: {
             width: "30%",
@@ -2035,6 +2051,7 @@ useEffect(() => {
       <Modal
         isOpen={loadWorkflowModalOpen}
         onRequestClose={() => setLoadWorkflowModalOpen(false)}
+        parentSelector={() => document.querySelector('.container')}
         style={{
           content: {
             width: "30%",
@@ -2151,7 +2168,7 @@ useEffect(() => {
     </div >
   );
 
-};
+});
 const buttonStyle = {
   background: "#f1f5f9",
   border: "1px solid #cbd5e1",
