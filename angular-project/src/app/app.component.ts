@@ -1,7 +1,8 @@
 import {
   Component,
   CUSTOM_ELEMENTS_SCHEMA,
-  AfterViewInit
+  AfterViewInit,
+  ElementRef
 } from '@angular/core';
 
 @Component({
@@ -14,6 +15,31 @@ import {
 })
 export class AppComponent implements AfterViewInit {
   title = 'angular-project';
+  isFullscreen = false;
+
+  constructor(private elementRef: ElementRef) {}
+
+  toggleFullscreen() {
+    if (!this.isFullscreen) {
+      const element = this.elementRef.nativeElement.querySelector('.container');
+      if (element.requestFullscreen) {
+        element.requestFullscreen();
+      } else if ((element as any).webkitRequestFullscreen) {
+        (element as any).webkitRequestFullscreen();
+      } else if ((element as any).msRequestFullscreen) {
+        (element as any).msRequestFullscreen();
+      }
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen();
+      } else if ((document as any).webkitExitFullscreen) {
+        (document as any).webkitExitFullscreen();
+      } else if ((document as any).msExitFullscreen) {
+        (document as any).msExitFullscreen();
+      }
+    }
+    this.isFullscreen = !this.isFullscreen;
+  }
 
   ngAfterViewInit(): void {
     const reactwidget = (window as any).reactwidget;
