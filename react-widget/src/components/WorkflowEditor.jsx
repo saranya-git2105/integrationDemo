@@ -64,6 +64,7 @@ const WorkflowEditor = forwardRef(({ config = { nodeTypes: {}, buttons: {} }, ap
   const [selectedElements, setSelectedElements] = useState([]);
   const [hoveredNodeId, setHoveredNodeId] = useState(null);
   let hoverTimeout;
+  const { getNodes, getEdges } = useReactFlow();
   const reactFlowInstance = useReactFlow();
   const [backgroundVariant, setBackgroundVariant] = useState("dots"); // 'dots', 'lines', 'cross', or 'solid'
   const [edgeStyle, setEdgeStyle] = useState("customSmooth");
@@ -149,23 +150,75 @@ const WorkflowEditor = forwardRef(({ config = { nodeTypes: {}, buttons: {} }, ap
   }, []);
   useEffect(() => {
     if (!getActions) return;
+    const workflowForm = JSON.parse(localStorage.getItem('workflowForm'));
     fetch(getActions, {
-      headers: apiUrls?.headers || {}  // <-- use headers from apiUrls
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(apiUrls?.headers || {})
+      },
+      body: JSON.stringify({
+        ModuleId: workflowForm.ModuleId,
+        ProjectId: workflowForm.ProjectId,
+        RDLCTypeId: workflowForm.RDLCTypeId,
+        CountryCode: "ind",
+        CurrenyCode: "inr",
+        LanguageCode: "eng"
+      })
     })
       .then((res) => res.json())
-      .then((data) => setStepActionsOptions(data))
-      .catch((err) => console.error("Failed to fetch actions", err));
-  }, [getActions, apiUrls?.headers]);
+      .then((data) => {
+        if (data?.ReturnCode === 0 && Array.isArray(data.Data)) {
+          setStepActionsOptions(data.Data); // ✅ Set actual action list
+        } else {
+          console.warn("No action data received");
+          setStepActionsOptions([]);
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to fetch actions", err);
+        setStepActionsOptions([]);
+      });
+  }, [getActions, apiUrls?.headers, workflowForm]);
+
 
   useEffect(() => {
     if (!getUsers) return;
+
     fetch(getUsers, {
-      headers: apiUrls?.headers || {}
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(apiUrls?.headers || {})
+      },
+      body: JSON.stringify({
+        MasterDataCode: "HRMSEmployee",
+        Active: "true",
+        CountryCode: "ind",
+        CurrencyCode: "inr",
+        LanguageCode: "eng"
+      })
     })
       .then((res) => res.json())
-      .then((data) => setStepUsersOptions(data))
-      .catch((err) => console.error("Failed to fetch users", err));
+      .then((data) => {
+        if (data?.ReturnCode === 0 && Array.isArray(data.Data)) {
+          // You can optionally map data here if needed for a dropdown
+          const userOptions = data.Data.map((user) => ({
+            value: user.Id,
+            label: user.Name,
+          }));
+          setStepUsersOptions(userOptions);
+        } else {
+          console.warn("No user data received");
+          setStepUsersOptions([]);
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to fetch users", err);
+        setStepUsersOptions([]);
+      });
   }, [getUsers, apiUrls?.headers]);
+
 
   useEffect(() => {
     if (!getWorkflows) return;
@@ -588,8 +641,8 @@ const WorkflowEditor = forwardRef(({ config = { nodeTypes: {}, buttons: {} }, ap
 
   const generateJson = (excludeStartStop = false) => {
 
-    let nodesCopy = [...nodes];
-    let edgesCopy = [...edges];
+    let nodesCopy = [...getNodes()];
+    let edgesCopy = [...getEdges()];
 
     const graph = {};
     const visited = new Set();
@@ -606,7 +659,7 @@ const WorkflowEditor = forwardRef(({ config = { nodeTypes: {}, buttons: {} }, ap
       graph[edge.source].push({ target: edge.target, label: edge.label });
     });
 
-    const startNode = nodesCopy.find((n) => n.data.nodeShape === "Start");
+    let startNode = nodesCopy.find((n) => n.data.nodeShape === "Start");
     if (!startNode && nodesCopy.length > 0) {
       const firstNode = nodes[0];
       const startNodeId = "sys_start";
@@ -681,6 +734,7 @@ const WorkflowEditor = forwardRef(({ config = { nodeTypes: {}, buttons: {} }, ap
 
     // Build JSON
     const jsonOutput = {
+      Id: "",
       WorkFlowName: workflowForm.WorkFlowName || "Untitled Workflow",
       ModuleId: workflowForm.ModuleId || "",
       ProjectId: workflowForm.ProjectId || "",
@@ -689,7 +743,7 @@ const WorkflowEditor = forwardRef(({ config = { nodeTypes: {}, buttons: {} }, ap
       DateEffective: workflowForm.DateEffective,
       WorkFlowSteps: sortedNodes.map((node) => {
         const props = node.data.properties || {};
-        const outgoingEdges = edges.filter((e) => e.source === node.id);
+        const outgoingEdges = edgesCopy.filter((e) => e.source === node.id);
 
         const resolveAction = (actionName) =>
           [...stepActionsOptions, ...stepUsersOptions].find(
@@ -701,9 +755,10 @@ const WorkflowEditor = forwardRef(({ config = { nodeTypes: {}, buttons: {} }, ap
           .map((edge) => {
             const action = resolveAction(edge.label);
             return {
+              Id: "",
               //ActionName: action?.ActionName || edge.label,
               //ActionCode: action?.ActionCode || "null",
-              NextStep: stepCodeMap[edge.target],
+              NextStepCode: "step" + stepCodeMap[edge.target],
               //ShortPurposeForForward: edge.data?.shortPurposeForForward || "",
               //PurposeForForward: edge.data?.purposeForForward || "",
               FromHandleId: edge.sourceHandle || "",
@@ -712,18 +767,23 @@ const WorkflowEditor = forwardRef(({ config = { nodeTypes: {}, buttons: {} }, ap
           });
         // 👇 Add this conditional properties based on nodeShape
         return {
-          StepCode: stepCodeMap[node.id],
+          Id: "",
+          StepCode: "step" + stepCodeMap[node.id],
           StepName: node.data.nodeShape === "Stop" ? "Completed" : node.data.label,
           WorkFlowStepAction: (props.StepActions || []).map((name) => {
             const action = stepActionsOptions.find((a) => a.ActionName === name);
-            return action?.ActionCode || name;
+            return {
+              Id: "",
+              ActionId: action?.WorkFlowActionId || name || "Action",
+            };
           }),
           WorkFlowStepUser: (props.CommonActions || []).map((name) => {
             const action = stepUsersOptions.find((a) => a.ActionName === name);
-            return action?.ActionCode || name;
+            return {
+              Id: "",
+              UserId: user?.Id || name || "ShinChan",
+            };
           }),
-
-
           WorkFlowStepTransistion,
           Position: node.position,
           Properties: {
@@ -738,16 +798,20 @@ const WorkflowEditor = forwardRef(({ config = { nodeTypes: {}, buttons: {} }, ap
     };
 
     console.log("✅ Generated JSON:", jsonOutput);
-    localStorage.setItem("workflowJson", jsonOutput);
+    //localStorage.setItem("workflowJson", jsonOutput);
     return jsonOutput;
   };
 
 
   // Function to show JSON in a modal
   const viewJson = () => {
-    setJsonData(JSON.stringify(generateJson(false), null, 2));
-    localStorage.setItem("workflowJson", JSON.stringify(jsonData));
-    setModalIsOpen1(true);
+    const json = generateJson(false);
+    if (json) {
+      const formatted = JSON.stringify(json, null, 2);
+      setJsonData(formatted);
+      localStorage.setItem("workflowJson", formatted);
+      // Optionally show a modal: setModalIsOpen1(true);
+    }
   };
   useImperativeHandle(ref, () => ({
     triggerViewJson: () => {
@@ -899,7 +963,7 @@ const WorkflowEditor = forwardRef(({ config = { nodeTypes: {}, buttons: {} }, ap
         body: JSON.stringify(workflowJson),
       });
 
-      if (response.ok) {
+      if (response.ReturnCode === 0) {
         alert("✅ Workflow saved successfully!");
 
       } else {
@@ -1731,7 +1795,7 @@ const WorkflowEditor = forwardRef(({ config = { nodeTypes: {}, buttons: {} }, ap
           flex: 1
         }}>
           {/* Description Field */}
-          <label style={modalStyles.label}>Description (Step Name):</label>
+          <label style={modalStyles.label}>Step Name :</label>
           <input
             type="text"
             name="stepName"

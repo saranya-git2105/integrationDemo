@@ -66,7 +66,9 @@ export class AppComponent implements AfterViewInit {
       ModuleId: 1,
       ProjectId: 'A3119471-1115-4CCB-A00E-BD2943CA602C',
       RDLCTypeId: '028FE61D-12B3-4500-B3B6-CFBCEFA6F1AD',
-      DateEffective: '22 May 2025'
+      DateEffective: '22 May 2025',
+      Id: "",
+      WorkFlowActionId: ""
     };
     localStorage.setItem('workflowForm', JSON.stringify(formData));
 
