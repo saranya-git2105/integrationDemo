@@ -158,41 +158,7 @@ const WorkflowEditor = forwardRef(({ config = { nodeTypes: {}, buttons: {} }, ap
         ...(apiUrls?.headers || {})
       },
       body: JSON.stringify({
-        ModuleId: workflowForm.ModuleId,
-        ProjectId: workflowForm.ProjectId,
-        RDLCTypeId: workflowForm.RDLCTypeId,
-        CountryCode: "ind",
-        CurrenyCode: "inr",
-        LanguageCode: "eng"
-      })
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        if (data?.ReturnCode === 0 && Array.isArray(data.Data)) {
-          setStepActionsOptions(data.Data); // ✅ Set actual action list
-        } else {
-          console.warn("No action data received");
-          setStepActionsOptions([]);
-        }
-      })
-      .catch((err) => {
-        console.error("Failed to fetch actions", err);
-        setStepActionsOptions([]);
-      });
-  }, [getActions, apiUrls?.headers, workflowForm]);
-
-
-  useEffect(() => {
-    if (!getUsers) return;
-
-    fetch(getUsers, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...(apiUrls?.headers || {})
-      },
-      body: JSON.stringify({
-        MasterDataCode: "HRMSEmployee",
+        MasterDataCode: "WorkFlowAction", // ✅ As requested
         Active: "true",
         CountryCode: "ind",
         CurrencyCode: "inr",
@@ -202,10 +168,45 @@ const WorkflowEditor = forwardRef(({ config = { nodeTypes: {}, buttons: {} }, ap
       .then((res) => res.json())
       .then((data) => {
         if (data?.ReturnCode === 0 && Array.isArray(data.Data)) {
-          // You can optionally map data here if needed for a dropdown
+          const formattedActions = data.Data.map((action) => ({
+            ActionId: action.Id,
+            ActionName: action.Name,
+            ActionCode: action.Code,
+          }));
+          setStepActionsOptions(formattedActions);
+        } else {
+          console.warn("No action data received");
+          setStepActionsOptions([]);
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to fetch actions", err);
+        setStepActionsOptions([]);
+      });
+  }, [getActions, apiUrls?.headers]);
+  
+  useEffect(() => {
+    if (!getUsers) return;
+    fetch(getUsers, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(apiUrls?.headers || {})
+      },
+      body: JSON.stringify({
+        MasterDataCode: "HRMSEmployee",  // ✅ fixed value
+        Active: "true",
+        CountryCode: "ind",
+        CurrencyCode: "inr",
+        LanguageCode: "eng"
+      })
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.ReturnCode === 0 && Array.isArray(data.Data)) {
           const userOptions = data.Data.map((user) => ({
-            value: user.Id,
-            label: user.Name,
+            UserId: user.Id,
+            UserName: user.Name,
           }));
           setStepUsersOptions(userOptions);
         } else {
@@ -218,7 +219,6 @@ const WorkflowEditor = forwardRef(({ config = { nodeTypes: {}, buttons: {} }, ap
         setStepUsersOptions([]);
       });
   }, [getUsers, apiUrls?.headers]);
-
 
   useEffect(() => {
     if (!getWorkflows) return;
@@ -240,14 +240,16 @@ const WorkflowEditor = forwardRef(({ config = { nodeTypes: {}, buttons: {} }, ap
         //role: props.Role || "",
         purposeForForward: props.PurposeForForward || "",
         shortPurposeForForward: props.ShortPurposeForForward || "",
-        stepActions: (props.StepActions || []).map(code => {
-          const found = stepActionsOptions.find(action => action.ActionCode === code);
-          return found?.ActionName || code; // fallback to code if not found
-        }),
-        commonActions: (props.CommonActions || []).map(code => {
+        StepActions: (nodeProperties.stepActions || []).map((name) => {
+          const match = stepActionsOptions.find((a) => a.ActionName === name);
+          return match?.ActionId || name; // ✅ Use ActionId
+        }), 
+
+        commonActions: Array.isArray(props.CommonActions) ? props.CommonActions.map(code => {
           const found = stepUsersOptions.find(action => action.ActionCode === code);
           return found?.ActionName || code;
-        }),
+        }) : [],
+
       });
     }
   }, [selectedNode]);
@@ -373,37 +375,37 @@ const WorkflowEditor = forwardRef(({ config = { nodeTypes: {}, buttons: {} }, ap
   };
 
   // Handle JSON file upload
-  const handleFileUpload = (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const jsonData = JSON.parse(e.target.result);
-        convertJsonToWorkflow(jsonData);
-      } catch (error) {
-        console.error("Invalid JSON file format", error);
-      }
-    };
-    reader.readAsText(file);
-  };
-  const handleCreateWorkflowClick = () => {
-    const newWorkflowOption = {
-      value: "new",
-      label: "➕ Create New Workflow",
-      data: null,
-    };
-
-    setWorkflowMeta({
-      name: "",
-      description: "",
-      dateEffective: new Date().toISOString(),
-    });
-    setSelectedWorkflowOption(newWorkflowOption);
-    setPendingAction("create");
-    setMetaModalOpen(true);
-  };
+  /* const handleFileUpload = (event) => {
+     const file = event.target.files[0];
+     if (!file) return;
+ 
+     const reader = new FileReader();
+     reader.onload = (e) => {
+       try {
+         const jsonData = JSON.parse(e.target.result);
+         convertJsonToWorkflow(jsonData);
+       } catch (error) {
+         console.error("Invalid JSON file format", error);
+       }
+     };
+     reader.readAsText(file);
+   };*/
+     const handleCreateWorkflowClick = () => {
+     const newWorkflowOption = {
+       value: "new",
+       label: "➕ Create New Workflow",
+       data: null,
+     };
+ 
+     setWorkflowMeta({
+       name: "",
+       description: "",
+       dateEffective: new Date().toISOString(),
+     });
+     setSelectedWorkflowOption(newWorkflowOption);
+     setPendingAction("create");
+     setMetaModalOpen(true);
+   };
 
   const workflowOptions = useMemo(() => [
     { label: "➕ Create New Workflow", value: "new" },
@@ -770,20 +772,16 @@ const WorkflowEditor = forwardRef(({ config = { nodeTypes: {}, buttons: {} }, ap
           Id: "",
           StepCode: "step" + stepCodeMap[node.id],
           StepName: node.data.nodeShape === "Stop" ? "Completed" : node.data.label,
-          WorkFlowStepAction: (props.StepActions || []).map((name) => {
-            const action = stepActionsOptions.find((a) => a.ActionName === name);
+          WorkFlowStepAction: (props.StepActions || []).map((actionId) => {
             return {
               Id: "",
-              ActionId: action?.WorkFlowActionId || name || "Action",
+              ActionId: actionId || "Unknown",
             };
           }),
-          WorkFlowStepUser: (props.CommonActions || []).map((name) => {
-            const action = stepUsersOptions.find((a) => a.ActionName === name);
-            return {
-              Id: "",
-              UserId: user?.Id || name || "ShinChan",
-            };
-          }),
+          WorkFlowStepUser: (props.CommonActions || []).map((userId) => ({
+            Id: "",
+            UserId: userId || "Unknown",
+          })),
           WorkFlowStepTransistion,
           Position: node.position,
           Properties: {
@@ -813,7 +811,7 @@ const WorkflowEditor = forwardRef(({ config = { nodeTypes: {}, buttons: {} }, ap
       setModalIsOpen1(true);
     }
   };
-  const SaveWorkflow =() =>{
+  const SaveWorkflow = () => {
     const json = localStorage.getItem("workflowJson");
     console.log("JSON from localStorage:", json);
   }
@@ -925,8 +923,15 @@ const WorkflowEditor = forwardRef(({ config = { nodeTypes: {}, buttons: {} }, ap
                 //Role: nodeProperties.role || "",
                 PurposeForForward: nodeProperties.purposeForForward || "",
                 ShortPurposeForForward: nodeProperties.shortPurposeForForward || "",
-                StepActions: nodeProperties.stepActions || [],
-                CommonActions: nodeProperties.commonActions || [],
+                StepActions: (nodeProperties.stepActions || []).map((name) => {
+                  const match = stepActionsOptions.find((a) => a.ActionName === name);
+                  return match?.ActionCode || name;
+                }),
+                CommonActions: (nodeProperties.commonActions || []).map((name) => {
+                  const match = stepUsersOptions.find((a) => a.UserName === name);
+                  return match?.UserId || name;
+                }),
+                
                 NodeShape: n.data.nodeShape,
               },
             },
@@ -1007,8 +1012,6 @@ const WorkflowEditor = forwardRef(({ config = { nodeTypes: {}, buttons: {} }, ap
      }
    };*/
 
-
-
   const updateEdgeLabel = (label) => {
     if (selectedEdge) {
       addToUndoStack();
@@ -1040,10 +1043,11 @@ const WorkflowEditor = forwardRef(({ config = { nodeTypes: {}, buttons: {} }, ap
     value: action.ActionName,
   }));
 
-  const commonOptionsFormatted = stepUsersOptions.map((action) => ({
-    label: action.ActionName,
-    value: action.ActionName,
+  const commonOptionsFormatted = stepUsersOptions.map((user) => ({
+    label: user.UserName,
+    value: user.UserId,
   }));
+
   const handleMetaContinue = () => {
     setMetaModalOpen(false);
     if (pendingAction === "save") {
