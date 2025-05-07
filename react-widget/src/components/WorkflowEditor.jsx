@@ -949,7 +949,7 @@ const WorkflowEditor = forwardRef(({ config = { nodeTypes: {}, buttons: {} }, ap
                 ShortPurposeForForward: nodeProperties.shortPurposeForForward || "",
                 StepActions: (nodeProperties.stepActions || []).map((name) => {
                   const match = stepActionsOptions.find((a) => a.ActionName === name);
-                  return match?.ActionCode || name;
+                  return match?.Id || name;
                 }),
                 CommonActions: (nodeProperties.commonActions || []).map((name) => {
                   const match = stepUsersOptions.find((a) => a.UserName === name);
