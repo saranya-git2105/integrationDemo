@@ -184,7 +184,7 @@ const WorkflowEditor = forwardRef(({ config = { nodeTypes: {}, buttons: {} }, ap
         setStepActionsOptions([]);
       });
   }, [getActions, apiUrls?.headers]);
-  
+
   useEffect(() => {
     if (!getUsers) return;
     fetch(getUsers, {
@@ -243,7 +243,7 @@ const WorkflowEditor = forwardRef(({ config = { nodeTypes: {}, buttons: {} }, ap
         StepActions: (nodeProperties.stepActions || []).map((name) => {
           const match = stepActionsOptions.find((a) => a.ActionName === name);
           return match?.ActionId || name; // ✅ Use ActionId
-        }), 
+        }),
 
         commonActions: Array.isArray(props.CommonActions) ? props.CommonActions.map(code => {
           const found = stepUsersOptions.find(action => action.ActionCode === code);
@@ -253,12 +253,23 @@ const WorkflowEditor = forwardRef(({ config = { nodeTypes: {}, buttons: {} }, ap
       });
     }
   }, [selectedNode]);
+  
   useEffect(() => {
     // Expose the method globally
     window.reactwidgetRef = {
-      viewJson
+      viewJson: () => {
+        const currentNodes = getNodes();
+        const currentEdges = getEdges();
+        console.log("Current nodes from Angular call:", currentNodes);
+        if (currentNodes.length === 0) {
+          alert("⚠️ Please add at least one node to the workflow before viewing JSON.");
+          return;
+        }
+        viewJson();
+      }
     };
-  }, []);
+  }, [getNodes, getEdges, nodes, edges]);
+
   const handleKeyDown = useCallback((e) => {
     const activeTag = document.activeElement?.tagName?.toLowerCase();
     const isInputFocused = ["input", "textarea", "select"].includes(activeTag);
@@ -390,22 +401,22 @@ const WorkflowEditor = forwardRef(({ config = { nodeTypes: {}, buttons: {} }, ap
      };
      reader.readAsText(file);
    };*/
-     const handleCreateWorkflowClick = () => {
-     const newWorkflowOption = {
-       value: "new",
-       label: "➕ Create New Workflow",
-       data: null,
-     };
- 
-     setWorkflowMeta({
-       name: "",
-       description: "",
-       dateEffective: new Date().toISOString(),
-     });
-     setSelectedWorkflowOption(newWorkflowOption);
-     setPendingAction("create");
-     setMetaModalOpen(true);
-   };
+  const handleCreateWorkflowClick = () => {
+    const newWorkflowOption = {
+      value: "new",
+      label: "➕ Create New Workflow",
+      data: null,
+    };
+
+    setWorkflowMeta({
+      name: "",
+      description: "",
+      dateEffective: new Date().toISOString(),
+    });
+    setSelectedWorkflowOption(newWorkflowOption);
+    setPendingAction("create");
+    setMetaModalOpen(true);
+  };
 
   const workflowOptions = useMemo(() => [
     { label: "➕ Create New Workflow", value: "new" },
@@ -456,13 +467,20 @@ const WorkflowEditor = forwardRef(({ config = { nodeTypes: {}, buttons: {} }, ap
         data: {
           label: isStop ? "Completed" : step.Properties?.StepName || stepCode,
           nodeShape,
+          WorkFlowStepAction: (props.StepActions || []).map((id) => ({
+            Id: "",
+            ActionId: id,
+          })),
+          WorkFlowStepUser: (props.CommonActions || []).map((id) => ({
+            Id: "",
+            UserId: id,
+          })),
+          WorkFlowStepTransistion: isStop ? "Completed" : step.Properties?.StepName || stepCode,
           properties: {
-            StepName: isStop ? "Completed" : step.Properties?.StepName || stepCode,
+            //StepName: isStop ? "Completed" : step.Properties?.StepName || stepCode,
             //Role: isStop ? "" : step.Properties?.Role || "",
             PurposeForForward: isStop ? "" : step.Properties?.PurposeForForward || "",
             ShortPurposeForForward: isStop ? "" : step.Properties?.ShortPurposeForForward || "",
-            StepActions: isStop ? [] : step.Properties?.StepActions || [],
-            CommonActions: isStop ? [] : step.Properties?.CommonActions || [],
             NodeShape: nodeShape,
           },
         },
@@ -643,8 +661,8 @@ const WorkflowEditor = forwardRef(({ config = { nodeTypes: {}, buttons: {} }, ap
 
   const generateJson = (excludeStartStop = false) => {
 
-    let nodesCopy = [...getNodes()];
-    let edgesCopy = [...getEdges()];
+    const nodesCopy = [...getNodes()];
+    const edgesCopy = [...getEdges()];
 
     const graph = {};
     const visited = new Set();
@@ -663,7 +681,7 @@ const WorkflowEditor = forwardRef(({ config = { nodeTypes: {}, buttons: {} }, ap
 
     let startNode = nodesCopy.find((n) => n.data.nodeShape === "Start");
     if (!startNode && nodesCopy.length > 0) {
-      const firstNode = nodes[0];
+      const firstNode = nodesCopy[0];
       const startNodeId = "sys_start";
 
       const newStartNode = {
@@ -696,10 +714,11 @@ const WorkflowEditor = forwardRef(({ config = { nodeTypes: {}, buttons: {} }, ap
         style: { strokeWidth: 2, stroke: "#333" },
       });
 
-      //startNode = newStartNode;
+      startNode = newStartNode;
     }
 
     if (!startNode) {
+      console.error("Start node is STILL undefined — nodesCopy:", nodesCopy);
       alert("Still no Start node even after adding one automatically.");
       return;
     }
@@ -726,7 +745,7 @@ const WorkflowEditor = forwardRef(({ config = { nodeTypes: {}, buttons: {} }, ap
         dfs(neighbor.target);
       }
     };
-
+    console.log("🚨 Start node right before DFS:", startNode);
     dfs(startNode.id);
 
     // Optional: include disconnected nodes too (if desired)
@@ -772,10 +791,11 @@ const WorkflowEditor = forwardRef(({ config = { nodeTypes: {}, buttons: {} }, ap
           Id: "",
           StepCode: "step" + stepCodeMap[node.id],
           StepName: node.data.nodeShape === "Stop" ? "Completed" : node.data.label,
-          WorkFlowStepAction: (props.StepActions || []).map((actionId) => {
+          WorkFlowStepAction: (props.StepActions || []).map((actionName) => {
+            const found = stepActionsOptions.find(a => a.ActionName === actionName);
             return {
               Id: "",
-              ActionId: actionId || "Unknown",
+              ActionId: found?.ActionId || actionName || "Unknown",
             };
           }),
           WorkFlowStepUser: (props.CommonActions || []).map((userId) => ({
@@ -806,18 +826,22 @@ const WorkflowEditor = forwardRef(({ config = { nodeTypes: {}, buttons: {} }, ap
     const json = generateJson(false);
     if (json) {
       const formatted = JSON.stringify(json, null, 2);
-      setJsonData(formatted);
       localStorage.setItem("workflowJson", formatted);
+      setJsonData(formatted);
       setModalIsOpen1(true);
     }
   };
   const SaveWorkflow = () => {
+    const jsonoutput = generateJson(false);
+    const jsonString = JSON.stringify(jsonoutput, null, 2);
+    localStorage.setItem("workflowJson", jsonString);
+    console.log("JSON saved to localStorage:", jsonString);
     const json = localStorage.getItem("workflowJson");
     console.log("JSON from localStorage:", json);
   }
   useImperativeHandle(ref, () => ({
     triggerViewJson: () => {
-      SaveWorkflow();
+      viewJson();
     }
   }));
 
@@ -931,7 +955,7 @@ const WorkflowEditor = forwardRef(({ config = { nodeTypes: {}, buttons: {} }, ap
                   const match = stepUsersOptions.find((a) => a.UserName === name);
                   return match?.UserId || name;
                 }),
-                
+
                 NodeShape: n.data.nodeShape,
               },
             },
