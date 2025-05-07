@@ -240,20 +240,23 @@ const WorkflowEditor = forwardRef(({ config = { nodeTypes: {}, buttons: {} }, ap
         //role: props.Role || "",
         purposeForForward: props.PurposeForForward || "",
         shortPurposeForForward: props.ShortPurposeForForward || "",
-        StepActions: (nodeProperties.stepActions || []).map((name) => {
-          const match = stepActionsOptions.find((a) => a.Name === name);
-          return match?.Id || name; // ✅ Use ActionId
-        }),
+        stepActions: Array.isArray(props.StepActions)
+          ? props.StepActions.map((id) => {
+            const found = stepActionsOptions.find((a) => a.ActionId === id);
+            return found?.ActionId || id;
+          })
+          : [],
 
-        commonActions: Array.isArray(props.CommonActions) ? props.CommonActions.map(code => {
-          const found = stepUsersOptions.find(action => action.Name === name);
-          return found?.UserId || code;
-        }) : [],
-
+        commonActions: Array.isArray(props.CommonActions)
+          ? props.CommonActions.map((id) => {
+            const found = stepUsersOptions.find((u) => u.UserId === id);
+            return found?.UserId || id;
+          })
+          : [],
       });
     }
-  }, [selectedNode]);
-  
+  }, [selectedNode, stepActionsOptions, stepUsersOptions]);
+
   useEffect(() => {
     // Expose the method globally
     window.reactwidgetRef = {
@@ -905,7 +908,7 @@ const WorkflowEditor = forwardRef(({ config = { nodeTypes: {}, buttons: {} }, ap
       stepName: props.StepName || node.data.label,
       //role: props.Role || "",
       StepActions: (nodeProperties.stepActions || []).map((name) => {
-        const match = stepActionsOptions.find((a) => a.Name === name);
+        const match = stepActionsOptions.find((a) => a.ActionName === name);
         return match?.Id || name;
       }),
       CommonActions: (nodeProperties.commonActions || []).map((name) => {
@@ -954,7 +957,7 @@ const WorkflowEditor = forwardRef(({ config = { nodeTypes: {}, buttons: {} }, ap
                 PurposeForForward: nodeProperties.purposeForForward || "",
                 ShortPurposeForForward: nodeProperties.shortPurposeForForward || "",
                 StepActions: (nodeProperties.stepActions || []).map((name) => {
-                  const match = stepActionsOptions.find((a) => a.Name === name);
+                  const match = stepActionsOptions.find((a) => a.ActionName === name);
                   return match?.Id || name;
                 }),
                 CommonActions: (nodeProperties.commonActions || []).map((name) => {
@@ -981,7 +984,8 @@ const WorkflowEditor = forwardRef(({ config = { nodeTypes: {}, buttons: {} }, ap
       )
     );
   };
-  
+
+
   const updateEdgeLabel = (label) => {
     if (selectedEdge) {
       addToUndoStack();
@@ -1009,8 +1013,8 @@ const WorkflowEditor = forwardRef(({ config = { nodeTypes: {}, buttons: {} }, ap
     setEdgeMenuPosition({ x: event.clientX, y: event.clientY });
   };
   const stepOptionsFormatted = stepActionsOptions.map((action) => ({
-    label: action.Name,
-    value: action.Id,
+    label: action.ActionName,
+    value: action.ActionName,
   }));
 
   const commonOptionsFormatted = stepUsersOptions.map((user) => ({
@@ -1193,6 +1197,8 @@ const WorkflowEditor = forwardRef(({ config = { nodeTypes: {}, buttons: {} }, ap
             </div>
           ))}
         </div>
+
+
         {/* Action Buttons */}
         {sidebarButtons.map(({ label, icon, action, color }) => (
           <button
