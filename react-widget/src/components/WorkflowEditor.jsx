@@ -831,7 +831,7 @@ const WorkflowEditor = forwardRef(({ config = { nodeTypes: {}, buttons: {} }, ap
       const formatted = JSON.stringify(json, null, 2);
       localStorage.setItem("workflowJson", formatted);
       setJsonData(formatted);
-      setModalIsOpen1(true);
+      //setModalIsOpen1(true);
     }
   };
   const SaveWorkflow = () => {
