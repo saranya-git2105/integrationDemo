@@ -56,7 +56,7 @@ export class AppComponent implements AfterViewInit {
 
     const reactwidget = (window as any).reactwidget;
 
-    const jwtToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzaWQiOiIzZWFiM2IzOS04ZTlhLTQxYjMtYjZlOC0wMjEyY2E3NmJiMDEiLCJzdGsiOiJQelE1Z0pWWDFJTVhuSWJNOUZpS3pHbndqR3o5Ryt2cWhxV3BiTVFUSmNLc0plczc1Y1lhM1RZODFSTGt3MzJrK1V6Z25QcVhQSmJ3bnkram1LSmhsMUZLckdXTmdKVDl0Vzk0ZGZjWEhoLytxZXgwVWY5NDBSN25yNk1MQ0srdnRqc3Z1a3dZalYyY29lSzlUSTBkNm1QM25MS0diSlg3NnI1RUtZVGwrMzQ9IiwidGVkIjoiMDEvMDQvMjAyNCA2OjQwOjAwIFBNIiwidXBrIjoiYTRlNGY3ZmUtMzgyNi00ZDA0LWFiMjMtYjIxNTcyZGJhODZlIiwibmJmIjoxNzQ2NDQxNTUxLCJleHAiOjE3NDY1Mjc5NTEsImlhdCI6MTc0NjQ0MTU1MX0.wzZycS2fDBbYcuMfzYGefDVPYexvF9plBJVgv-tloRM';
+    const jwtToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzaWQiOiI1OWNmZGM3OC01NWZjLTQxMDEtOWE1Yy0yNTQ5MzkxNDQyNzQiLCJ0ZWQiOiIxLzEvMDAwMSAxMjowMDowMCBBTSIsIm5iZiI6MTc0NjYxNzM2MSwiZXhwIjoxNzQ2NzAzNzYxLCJpYXQiOjE3NDY2MTczNjF9.sRnEMsPxpGvLp3LJbkBzWiWVd00gS0uYVYI4hie84xY';
     localStorage.setItem('jwtToken', jwtToken);
 
     const formData = {
@@ -71,8 +71,8 @@ export class AppComponent implements AfterViewInit {
     localStorage.setItem('workflowForm', JSON.stringify(formData));
 
     reactwidget.setApiUrls({
-      getActions: 'https://app.jassi.me/actions',
-      getUsers: 'https://app.jassi.me/users',
+      getActions: 'https://revalposapilocal.revalweb.com/api/GetMasters',
+      getUsers: 'https://revalposapilocal.revalweb.com/api/GetMasters',
       getWorkflows: 'https://app.jassi.me/workflows',
       saveWorkflow: 'https://app.jassi.me/seed',
       loadWorkflow: 'https://app.jassi.me/get',
