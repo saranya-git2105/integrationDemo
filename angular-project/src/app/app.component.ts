@@ -31,20 +31,28 @@ export class AppComponent implements AfterViewInit {
   }
   saveWorkflow() {
     const reactViewJson = (window as any).reactwidgetRef?.viewJson;
-  
+
     if (typeof reactViewJson === 'function') {
       reactViewJson(); // React generates and saves JSON in localStorage
     }
-  
+
     setTimeout(() => {
       const json = localStorage.getItem('workflowJson');
       if (json) {
         const parsed = JSON.parse(json);
         console.log("📝 Workflow JSON from React:", parsed);
-    } // slight delay to ensure React has written to localStorage
-  },300);
-}
- 
+      } // slight delay to ensure React has written to localStorage
+    }, 300);
+  }
+  loadWorkflowById(Id: string) {
+    localStorage.setItem('selectedWorkflowId', Id);
+
+    const reactLoadFn = (window as any).reactwidgetRef?.loadWorkflowById;
+    if (typeof reactLoadFn === 'function') {
+      reactLoadFn(Id); // Optional: trigger React manually too
+    }
+  }
+
 
   initializeReactWidget() {
     const container = document.getElementById('react-widget-container');

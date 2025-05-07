@@ -137,6 +137,15 @@ const WorkflowEditor = forwardRef(({ config = { nodeTypes: {}, buttons: {} }, ap
     loadWorkflow = ""
   } = apiUrls;
   useEffect(() => {
+  // Optional: Auto-load if ID already in localStorage
+    const storedId = localStorage.getItem('selectedWorkflowId');
+    console.log("Stored ID from localStorage:", storedId);
+    if (storedId) {
+      loadWorkflowById(storedId);
+    }
+  }, []);
+  
+  useEffect(() => {
     const storedForm = localStorage.getItem('workflowForm');
     if (storedForm) {
       try {
@@ -828,17 +837,10 @@ const WorkflowEditor = forwardRef(({ config = { nodeTypes: {}, buttons: {} }, ap
       const formatted = JSON.stringify(json, null, 2);
       localStorage.setItem("workflowJson", formatted);
       setJsonData(formatted);
-      setModalIsOpen1(true);
+      //setModalIsOpen1(true);
     }
   };
-  const SaveWorkflow = () => {
-    const jsonoutput = generateJson(false);
-    const jsonString = JSON.stringify(jsonoutput, null, 2);
-    localStorage.setItem("workflowJson", jsonString);
-    console.log("JSON saved to localStorage:", jsonString);
-    const json = localStorage.getItem("workflowJson");
-    console.log("JSON from localStorage:", json);
-  }
+
   useImperativeHandle(ref, () => ({
     triggerViewJson: () => {
       viewJson();
@@ -904,8 +906,14 @@ const WorkflowEditor = forwardRef(({ config = { nodeTypes: {}, buttons: {} }, ap
     const normalizedProps = {
       stepName: props.StepName || node.data.label,
       //role: props.Role || "",
-      stepActions: props.StepActions || [],
-      commonActions: props.CommonActions || [],
+      StepActions: (nodeProperties.stepActions || []).map((name) => {
+        const match = stepActionsOptions.find((a) => a.ActionName === name);
+        return match?.Id || name;
+      }),
+      CommonActions: (nodeProperties.commonActions || []).map((name) => {
+        const match = stepUsersOptions.find((a) => a.UserName === name);
+        return match?.UserId || name;
+      }),
       purposeForForward: props.PurposeForForward || "",
       shortPurposeForForward: props.ShortPurposeForForward || "",
     };
@@ -975,67 +983,7 @@ const WorkflowEditor = forwardRef(({ config = { nodeTypes: {}, buttons: {} }, ap
       )
     );
   };
-  // Save current workflow JSON to backend
-  /*const saveWorkflowToAPI = async () => {
-    // Validation: If any field is missing, show the meta modal
-    if (!workflowMeta.name || !workflowMeta.description || !workflowMeta.dateEffective) {
-      setPendingAction("save");
-      setMetaModalOpen(true);
-      return;
-    }
-    const workflowJson = generateJson(false);
-    if (selectedWorkflowOption && selectedWorkflowOption.value && selectedWorkflowOption.value !== "new") {
-      workflowJson.workflow.Id = selectedWorkflowOption.value;
-    }
-    try {
-      const response = await fetch(saveWorkflow, {
-        method: "POST",
-        headers: {
-          ...apiUrls?.headers,
-        },
-        body: JSON.stringify(workflowJson),
-      });
-
-      if (response.ReturnCode === 0) {
-        alert("✅ Workflow saved successfully!");
-
-      } else {
-        alert("❌ Failed to save workflow.");
-      }
-    } catch (error) {
-      console.error("Error saving workflow:", error);
-      alert("🚨 Error occurred while saving workflow.");
-    }
-  };*/
-
-  // Load workflow from backend and render on canvas
-  /*const loadWorkflow = async () => {
-     try {
-       const response = await fetch("https://app.jassi.me/get/65");
-       const data = await response.json();
- 
-       if (data?.Workflow?.Steps?.length > 0) {
-         convertJsonToWorkflow(data);
-         setWorkflowMeta({
-           name: data.Workflow.Name || "",
-           description: data.Workflow.Description || "",
-           dateEffective: data.Workflow.DateEffective || new Date().toISOString(),
-         });
-         setSelectedWorkflowOption({
-           label: `${data.Workflow.Name} - ${data.Workflow.Description}`,
-           value: data.Workflow.Id,
-           data: data.Workflow,
-         });
-         alert("📥 Workflow loaded successfully!");
-       } else {
-         alert("⚠️ No workflow data found.");
-       }
-     } catch (error) {
-       console.error("Error loading workflow:", error);
-       alert("🚨 Error occurred while loading workflow.");
-     }
-   };*/
-
+  
   const updateEdgeLabel = (label) => {
     if (selectedEdge) {
       addToUndoStack();
@@ -1062,15 +1010,51 @@ const WorkflowEditor = forwardRef(({ config = { nodeTypes: {}, buttons: {} }, ap
     setContextMenu({ x: event.clientX, y: event.clientY });
     setEdgeMenuPosition({ x: event.clientX, y: event.clientY });
   };
+
+  const loadWorkflowById = async (workflowId) => {
+    if (!workflowId) return;
+  
+    try {
+      const response = await fetch(`${loadWorkflow}/${workflowId}`, {
+        method: "GET",
+        headers: {
+          ...apiUrls?.headers,
+        },
+      });
+  
+      const data = await response.json();
+      if (data?.Workflow?.Steps?.length > 0) {
+        convertJsonToWorkflow(data);
+        setWorkflowMeta({
+          name: data.Workflow.Name || "",
+          description: data.Workflow.Description || "",
+          dateEffective: data.Workflow.DateEffective || new Date().toISOString(),
+        });
+        setSelectedWorkflowOption({
+          label: `${data.Workflow.Name} - ${data.Workflow.Description}`,
+          value: data.Workflow.Id,
+          data: data.Workflow,
+        });
+      } else {
+        alert("⚠️ No workflow data found.");
+      }
+    } catch (error) {
+      console.error("Error loading workflow:", error);
+      alert("🚨 Error occurred while loading workflow.");
+    }
+  };
+  
   const stepOptionsFormatted = stepActionsOptions.map((action) => ({
     label: action.ActionName,
-    value: action.ActionName,
+    value: action.Id,
   }));
 
   const commonOptionsFormatted = stepUsersOptions.map((user) => ({
     label: user.UserName,
     value: user.UserId,
   }));
+
+
 
   const handleMetaContinue = () => {
     setMetaModalOpen(false);
@@ -2143,7 +2127,7 @@ const WorkflowEditor = forwardRef(({ config = { nodeTypes: {}, buttons: {} }, ap
           </button>
         </div>
       </Modal>
-      {/* Modal for Loading the Workflow */}
+      {/* Modal for Loading the Workflow 
       <Modal
         isOpen={loadWorkflowModalOpen}
         onRequestClose={() => setLoadWorkflowModalOpen(false)}
@@ -2260,7 +2244,7 @@ const WorkflowEditor = forwardRef(({ config = { nodeTypes: {}, buttons: {} }, ap
             Cancel
           </button>
         </div>
-      </Modal>
+      </Modal>*/}
     </div >
   );
 
