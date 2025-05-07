@@ -30,7 +30,7 @@ export class AppComponent implements AfterViewInit {
     });
   }
   saveWorkflow() {
-    const reactViewJson = (window as any).reactwidgetRef?.SaveWorkflow;
+    const reactViewJson = (window as any).reactwidgetRef?.viewJson;
   
     if (typeof reactViewJson === 'function') {
       reactViewJson(); // React generates and saves JSON in localStorage
