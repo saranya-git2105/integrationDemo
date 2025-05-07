@@ -137,15 +137,6 @@ const WorkflowEditor = forwardRef(({ config = { nodeTypes: {}, buttons: {} }, ap
     loadWorkflow = ""
   } = apiUrls;
   useEffect(() => {
-  // Optional: Auto-load if ID already in localStorage
-    const storedId = localStorage.getItem('selectedWorkflowId');
-    console.log("Stored ID from localStorage:", storedId);
-    if (storedId) {
-      loadWorkflowById(storedId);
-    }
-  }, []);
-  
-  useEffect(() => {
     const storedForm = localStorage.getItem('workflowForm');
     if (storedForm) {
       try {
@@ -250,13 +241,13 @@ const WorkflowEditor = forwardRef(({ config = { nodeTypes: {}, buttons: {} }, ap
         purposeForForward: props.PurposeForForward || "",
         shortPurposeForForward: props.ShortPurposeForForward || "",
         StepActions: (nodeProperties.stepActions || []).map((name) => {
-          const match = stepActionsOptions.find((a) => a.ActionName === name);
-          return match?.ActionId || name; // ✅ Use ActionId
+          const match = stepActionsOptions.find((a) => a.Name === name);
+          return match?.Id || name; // ✅ Use ActionId
         }),
 
         commonActions: Array.isArray(props.CommonActions) ? props.CommonActions.map(code => {
-          const found = stepUsersOptions.find(action => action.ActionCode === code);
-          return found?.ActionName || code;
+          const found = stepUsersOptions.find(action => action.Name === name);
+          return found?.UserId || code;
         }) : [],
 
       });
@@ -837,10 +828,17 @@ const WorkflowEditor = forwardRef(({ config = { nodeTypes: {}, buttons: {} }, ap
       const formatted = JSON.stringify(json, null, 2);
       localStorage.setItem("workflowJson", formatted);
       setJsonData(formatted);
-      //setModalIsOpen1(true);
+      setModalIsOpen1(true);
     }
   };
-
+  const SaveWorkflow = () => {
+    const jsonoutput = generateJson(false);
+    const jsonString = JSON.stringify(jsonoutput, null, 2);
+    localStorage.setItem("workflowJson", jsonString);
+    console.log("JSON saved to localStorage:", jsonString);
+    const json = localStorage.getItem("workflowJson");
+    console.log("JSON from localStorage:", json);
+  }
   useImperativeHandle(ref, () => ({
     triggerViewJson: () => {
       viewJson();
@@ -907,7 +905,7 @@ const WorkflowEditor = forwardRef(({ config = { nodeTypes: {}, buttons: {} }, ap
       stepName: props.StepName || node.data.label,
       //role: props.Role || "",
       StepActions: (nodeProperties.stepActions || []).map((name) => {
-        const match = stepActionsOptions.find((a) => a.ActionName === name);
+        const match = stepActionsOptions.find((a) => a.Name === name);
         return match?.Id || name;
       }),
       CommonActions: (nodeProperties.commonActions || []).map((name) => {
@@ -956,7 +954,7 @@ const WorkflowEditor = forwardRef(({ config = { nodeTypes: {}, buttons: {} }, ap
                 PurposeForForward: nodeProperties.purposeForForward || "",
                 ShortPurposeForForward: nodeProperties.shortPurposeForForward || "",
                 StepActions: (nodeProperties.stepActions || []).map((name) => {
-                  const match = stepActionsOptions.find((a) => a.ActionName === name);
+                  const match = stepActionsOptions.find((a) => a.Name === name);
                   return match?.Id || name;
                 }),
                 CommonActions: (nodeProperties.commonActions || []).map((name) => {
@@ -1010,42 +1008,8 @@ const WorkflowEditor = forwardRef(({ config = { nodeTypes: {}, buttons: {} }, ap
     setContextMenu({ x: event.clientX, y: event.clientY });
     setEdgeMenuPosition({ x: event.clientX, y: event.clientY });
   };
-
-  const loadWorkflowById = async (workflowId) => {
-    if (!workflowId) return;
-  
-    try {
-      const response = await fetch(`${loadWorkflow}/${workflowId}`, {
-        method: "GET",
-        headers: {
-          ...apiUrls?.headers,
-        },
-      });
-  
-      const data = await response.json();
-      if (data?.Workflow?.Steps?.length > 0) {
-        convertJsonToWorkflow(data);
-        setWorkflowMeta({
-          name: data.Workflow.Name || "",
-          description: data.Workflow.Description || "",
-          dateEffective: data.Workflow.DateEffective || new Date().toISOString(),
-        });
-        setSelectedWorkflowOption({
-          label: `${data.Workflow.Name} - ${data.Workflow.Description}`,
-          value: data.Workflow.Id,
-          data: data.Workflow,
-        });
-      } else {
-        alert("⚠️ No workflow data found.");
-      }
-    } catch (error) {
-      console.error("Error loading workflow:", error);
-      alert("🚨 Error occurred while loading workflow.");
-    }
-  };
-  
   const stepOptionsFormatted = stepActionsOptions.map((action) => ({
-    label: action.ActionName,
+    label: action.Name,
     value: action.Id,
   }));
 
@@ -1053,8 +1017,6 @@ const WorkflowEditor = forwardRef(({ config = { nodeTypes: {}, buttons: {} }, ap
     label: user.UserName,
     value: user.UserId,
   }));
-
-
 
   const handleMetaContinue = () => {
     setMetaModalOpen(false);
@@ -1231,8 +1193,6 @@ const WorkflowEditor = forwardRef(({ config = { nodeTypes: {}, buttons: {} }, ap
             </div>
           ))}
         </div>
-
-
         {/* Action Buttons */}
         {sidebarButtons.map(({ label, icon, action, color }) => (
           <button
@@ -2127,7 +2087,7 @@ const WorkflowEditor = forwardRef(({ config = { nodeTypes: {}, buttons: {} }, ap
           </button>
         </div>
       </Modal>
-      {/* Modal for Loading the Workflow 
+      {/* Modal for Loading the Workflow */}
       <Modal
         isOpen={loadWorkflowModalOpen}
         onRequestClose={() => setLoadWorkflowModalOpen(false)}
@@ -2244,7 +2204,7 @@ const WorkflowEditor = forwardRef(({ config = { nodeTypes: {}, buttons: {} }, ap
             Cancel
           </button>
         </div>
-      </Modal>*/}
+      </Modal>
     </div >
   );
 
