@@ -80,9 +80,10 @@ const WorkflowEditor = forwardRef(({ config = { nodeTypes: {}, buttons: {} }, ap
   const sidebarNodeTypes = useMemo(() => (
     [
       { label: "Start", color: "#9fda7c", shape: "circle" },
-      { label: "Stop", color: "#FFB7B4", shape: "circle" },
+      
       { label: "Step", color: "#82d6f7", shape: "rect" },
-      { label: "Decision", color: "#B388EB", shape: "diamond" },
+      { label: "Stop", color: "#FFB7B4", shape: "circle" },
+      //{ label: "Decision", color: "#B388EB", shape: "diamond" },
     ].filter(({ label }) => config?.nodeTypes?.[label] !== false)
   ), [config]);
 
@@ -344,6 +345,18 @@ const WorkflowEditor = forwardRef(({ config = { nodeTypes: {}, buttons: {} }, ap
   const onDragStart = (event, nodeType) => {
     event.dataTransfer.setData("application/reactflow", nodeType);
     event.dataTransfer.effectAllowed = "move";
+    
+    // Create an empty drag image
+    const dragImage = document.createElement('div');
+    dragImage.style.width = '1px';
+    dragImage.style.height = '1px';
+    document.body.appendChild(dragImage);
+    event.dataTransfer.setDragImage(dragImage, 0, 0);
+    
+    // Clean up the temporary element
+    setTimeout(() => {
+      document.body.removeChild(dragImage);
+    }, 0);
   };
   const showLockedToast = () => {
     if (!lockedToast) {
@@ -1179,12 +1192,12 @@ const WorkflowEditor = forwardRef(({ config = { nodeTypes: {}, buttons: {} }, ap
           {sidebarNodeTypes.map(({ label, color, shape }) => (
             <div
               key={label}
+              draggable
+              onDragStart={(e) => onDragStart(e, label)}
               style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "14px", cursor: "grab" }}
             >
               <span style={{ fontSize: "13px" }}>{label}</span>
               <div
-                draggable
-                onDragStart={(e) => onDragStart(e, label)}
                 style={{
                   width: shape === "diamond" ? 20 : 20,
                   height: shape === "diamond" ? 20 : 20,
