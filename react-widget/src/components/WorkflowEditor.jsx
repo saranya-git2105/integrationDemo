@@ -270,7 +270,6 @@ const WorkflowEditor = forwardRef(
         });
     }, [getUsers, apiUrls?.headers]);
 
-    
 
     useEffect(() => {
       if (selectedNode) {
@@ -1558,39 +1557,55 @@ const WorkflowEditor = forwardRef(
           </ReactFlow>
           <EdgeLabelRenderer>
             {edges
-              .filter((edge) => edge.id === hoveredEdgeId && (edge.label || edge.data?.shortPurposeForForward || edge.data?.purposeForForward))
+              .filter(
+                (edge) =>
+                  edge.id === hoveredEdgeId &&
+                  (edge.label ||
+                    edge.data?.shortPurposeForForward ||
+                    edge.data?.purposeForForward)
+              )
               .map((edge) => {
                 const sourceNode = nodes.find((n) => n.id === edge.source);
                 const targetNode = nodes.find((n) => n.id === edge.target);
                 if (!sourceNode || !targetNode) return null;
 
-                const edgeCenterX = (sourceNode.position.x + targetNode.position.x) / 2 + 75;
-                const edgeCenterY = (sourceNode.position.y + targetNode.position.y) / 2 + 10; // Changed from 30 to 10 to move up
+                const edgeCenterX =
+                  (sourceNode.position.x + targetNode.position.x) / 2 + 75;
+                const edgeCenterY =
+                  (sourceNode.position.y + targetNode.position.y) / 2 + 10; // Changed from 30 to 10 to move up
 
                 return (
                   <div
                     key={`tooltip-${edge.id}`}
                     style={{
-                      position: 'absolute',
+                      position: "absolute",
                       transform: `translate(-50%, -100%) translate(${edgeCenterX}px, ${edgeCenterY}px)`, // Changed from -50% to -100% to position above
-                      background: '#fefce8',
-                      color: 'black',
-                      padding: '6px 10px',
-                      borderRadius: '6px',
-                      fontSize: '12px',
-                      whiteSpace: 'pre-line',
-                      maxWidth: '240px',
+                      background: "#fefce8",
+                      color: "black",
+                      padding: "6px 10px",
+                      borderRadius: "6px",
+                      fontSize: "12px",
+                      whiteSpace: "pre-line",
+                      maxWidth: "240px",
                       zIndex: 999,
-                      pointerEvents: 'none',
-                      boxShadow: '0 4px 10px rgba(0,0,0,0.3)',
+                      pointerEvents: "none",
+                      boxShadow: "0 4px 10px rgba(0,0,0,0.3)",
                     }}
                   >
-                    {edge.label && <div><strong>{edge.label}</strong></div>}
+                    {edge.label && (
+                      <div>
+                        <strong>{edge.label}</strong>
+                      </div>
+                    )}
                     {edge?.data?.shortPurposeForForward && (
-                      <div><em>{edge.data.shortPurposeForForward}</em></div>
+                      <div>
+                        <em>{edge.data.shortPurposeForForward}</em>
+                      </div>
                     )}
                     {edge?.data?.purposeForForward && (
-                      <div style={{ marginTop: '4px' }}>{edge.data.purposeForForward}</div>
+                      <div style={{ marginTop: "4px" }}>
+                        {edge.data.purposeForForward}
+                      </div>
                     )}
                   </div>
                 );
@@ -1723,9 +1738,9 @@ const WorkflowEditor = forwardRef(
                 Select Edge Action:
               </label>
               <Select
-                options={stepActionsOptions.map(action => ({
+                options={stepActionsOptions.map((action) => ({
                   label: action.ActionName,
-                  value: action.ActionName
+                  value: action.ActionName,
                 }))}
                 value={{ label: selectedEdge.label, value: selectedEdge.label }}
                 onChange={(selected) => updateEdgeLabel(selected.value)}
@@ -1944,24 +1959,28 @@ const WorkflowEditor = forwardRef(
               isMulti
               closeMenuOnSelect={false}
               hideSelectedOptions={false}
-              options={stepActionsOptions.map(action => ({
+              options={stepActionsOptions.map((action) => ({
                 label: action.ActionName,
-                value: action.ActionName
+                value: action.ActionName,
               }))}
-              value={nodeProperties.stepActions?.map(actionName => ({
-                label: actionName,
-                value: actionName
-              })) || []}
+              value={
+                nodeProperties.stepActions?.map((actionName) => ({
+                  label: actionName,
+                  value: actionName,
+                })) || []
+              }
               onChange={(selected) =>
                 setNodeProperties((prev) => ({
                   ...prev,
-                  stepActions: selected ? selected.map((item) => item.value) : [],
+                  stepActions: selected
+                    ? selected.map((item) => item.value)
+                    : [],
                 }))
               }
               styles={{
                 control: (base) => ({
                   ...base,
-                  fontSize: "14px"
+                  fontSize: "14px",
                 }),
                 option: (base, state) => ({
                   ...base,
@@ -1969,20 +1988,20 @@ const WorkflowEditor = forwardRef(
                   backgroundColor: state.isSelected ? "#e2e8f0" : "white",
                   color: "black",
                   "&:hover": {
-                    backgroundColor: "#f1f5f9"
-                  }
+                    backgroundColor: "#f1f5f9",
+                  },
                 }),
                 multiValue: (base) => ({
                   ...base,
                   backgroundColor: "#e2e8f0",
                   borderRadius: "4px",
-                  margin: "2px"
+                  margin: "2px",
                 }),
                 multiValueLabel: (base) => ({
                   ...base,
                   color: "black",
-                  padding: "4px 8px"
-                })
+                  padding: "4px 8px",
+                }),
               }}
               components={{
                 Option: ({ children, ...props }) => (
@@ -1991,7 +2010,7 @@ const WorkflowEditor = forwardRef(
                       display: "flex",
                       alignItems: "center",
                       padding: "8px",
-                      cursor: "pointer"
+                      cursor: "pointer",
                     }}
                     onClick={() => props.selectOption(props.data)}
                   >
@@ -2003,7 +2022,7 @@ const WorkflowEditor = forwardRef(
                     />
                     {children}
                   </div>
-                )
+                ),
               }}
             />
 
@@ -2013,24 +2032,28 @@ const WorkflowEditor = forwardRef(
               isMulti
               closeMenuOnSelect={false}
               hideSelectedOptions={false}
-              options={stepUsersOptions.map(user => ({
+              options={stepUsersOptions.map((user) => ({
                 label: user.UserName,
-                value: user.UserName
+                value: user.UserName,
               }))}
-              value={nodeProperties.commonActions?.map(userName => ({
-                label: userName,
-                value: userName
-              })) || []}
+              value={
+                nodeProperties.commonActions?.map((userName) => ({
+                  label: userName,
+                  value: userName,
+                })) || []
+              }
               onChange={(selected) =>
                 setNodeProperties((prev) => ({
                   ...prev,
-                  commonActions: selected ? selected.map((item) => item.value) : [],
+                  commonActions: selected
+                    ? selected.map((item) => item.value)
+                    : [],
                 }))
               }
               styles={{
                 control: (base) => ({
                   ...base,
-                  fontSize: "14px"
+                  fontSize: "14px",
                 }),
                 option: (base, state) => ({
                   ...base,
@@ -2038,20 +2061,20 @@ const WorkflowEditor = forwardRef(
                   backgroundColor: state.isSelected ? "#e2e8f0" : "white",
                   color: "black",
                   "&:hover": {
-                    backgroundColor: "#f1f5f9"
-                  }
+                    backgroundColor: "#f1f5f9",
+                  },
                 }),
                 multiValue: (base) => ({
                   ...base,
                   backgroundColor: "#e2e8f0",
                   borderRadius: "4px",
-                  margin: "2px"
+                  margin: "2px",
                 }),
                 multiValueLabel: (base) => ({
                   ...base,
                   color: "black",
-                  padding: "4px 8px"
-                })
+                  padding: "4px 8px",
+                }),
               }}
             />
 
