@@ -342,6 +342,13 @@ const WorkflowEditor = forwardRef(
         }
       };
     }, [convertJsonToWorkflow]);
+    useEffect(() => {
+
+      if (stepActionsOptions.length && stepUsersOptions.length) {
+
+        // and call convertJsonToWorkflow here when options are ready.
+      }
+    }, [stepActionsOptions, stepUsersOptions]);
 
     const handleKeyDown = useCallback(
       (e) => {
@@ -540,7 +547,114 @@ const WorkflowEditor = forwardRef(
     );
     const convertJsonToWorkflow = async (data) => {
       console.log("📥 Incoming JSON Data:", JSON.stringify(data, null, 2));
-      
+      let actions = stepActionsOptions;
+
+      let users = stepUsersOptions;
+
+
+
+      if (!actions.length) {
+
+        console.log("⏳ Loading actions...");
+
+        try {
+
+          const actionsData = await Promise.resolve(getActions());
+
+          console.log("📥 Raw Actions Response:", actionsData);
+
+
+
+          if (actionsData?.ReturnCode === 0 && Array.isArray(actionsData.Data)) {
+
+            actions = actionsData.Data.map((action) => ({
+
+              ActionId: action.Id,
+
+              ActionName: action.Name,
+
+              ActionCode: action.Code,
+
+            }));
+
+            console.log("📋 Formatted Actions:", actions);
+
+            setStepActionsOptions(actions);
+
+          } else {
+
+            console.warn("⚠️ Invalid actions data format:", actionsData);
+
+            return;
+
+          }
+
+        } catch (err) {
+
+          console.error("❌ Failed to load actions:", err);
+
+          return;
+
+        }
+
+      }
+
+
+
+      if (!users.length) {
+
+        console.log("⏳ Loading users...");
+
+        try {
+
+          const usersData = await Promise.resolve(getUsers());
+
+          console.log("📥 Raw Users Response:", usersData);
+
+
+
+          if (usersData?.ReturnCode === 0 && Array.isArray(usersData.Data)) {
+
+            users = usersData.Data.map((user) => ({
+
+              UserId: user.Id,
+
+              UserName: user.Name,
+
+            }));
+
+            console.log("📋 Formatted Users:", users);
+
+            setStepUsersOptions(users);
+
+          } else {
+
+            console.warn("⚠️ Invalid users data format:", usersData);
+
+            return;
+
+          }
+
+        } catch (err) {
+
+          console.error("❌ Failed to load users:", err);
+
+          return;
+
+        }
+
+      }
+
+      // Verify both actions and users are loaded
+
+      if (!actions.length || !users.length) {
+
+        console.error("❌ Actions or users not loaded, cannot proceed with workflow conversion");
+
+        return;
+
+      }
+
       const workflowSteps = data?.WorkFlowSteps || [];
       console.log("📋 Workflow Steps:", JSON.stringify(workflowSteps, null, 2));
 
@@ -551,14 +665,97 @@ const WorkflowEditor = forwardRef(
 
       // Helper function to get action name from ID
       const getActionNameFromId = (actionId) => {
-        const action = stepActionsOptions.find(a => a.ActionId === actionId);
-        return action ? action.ActionName : actionId;
+        if (!actionId) {
+
+          console.warn("⚠️ No action ID provided");
+
+          return "";
+
+        }
+
+
+
+        console.log("🔍 Looking up action:", {
+
+          actionId,
+
+          availableActions: actions,
+
+          actionCount: actions.length
+
+        });
+
+
+
+        const foundAction = actions.find(a => a.ActionId === actionId);
+
+        if (foundAction) {
+
+          console.log("✅ Found action:", foundAction);
+
+          return foundAction.ActionName;
+
+        }
+
+
+
+        // Try to find by ActionCode if ActionId doesn't match
+
+        const foundByCode = actions.find(a => a.ActionCode === actionId);
+
+        if (foundByCode) {
+
+          console.log("✅ Found action by code:", foundByCode);
+
+          return foundByCode.ActionName;
+
+        }
+
+
+
+        console.warn("⚠️ Action not found:", actionId);
+
+        return actionId;
       };
 
       // Helper function to get user name from ID
       const getUserNameFromId = (userId) => {
-        const user = stepUsersOptions.find(u => u.UserId === userId);
-        return user ? user.UserName : userId;
+
+        if (!userId) {
+
+          console.warn("⚠️ No user ID provided");
+
+          return "";
+
+        }
+
+
+
+        console.log("🔍 Looking up user:", {
+
+          userId,
+
+          availableUsers: users,
+
+          userCount: users.length
+
+        });
+
+
+
+        const foundUser = users.find(u => u.UserId === userId);
+
+        if (foundUser) {
+
+          console.log("✅ Found user:", foundUser);
+
+          return foundUser.UserName;
+
+        }
+        console.warn("⚠️ User not found:", userId);
+
+        return userId;
+
       };
 
       const stepCodeToIdMap = {};
@@ -583,19 +780,19 @@ const WorkflowEditor = forwardRef(
           (stepNameLower === "start"
             ? "Start"
             : stepNameLower === "stop" || stepNameLower === "completed"
-            ? "Stop"
-            : "Step");
+              ? "Stop"
+              : "Step");
 
         const isStop = stepNameLower === "stop" || stepNameLower === "completed";
         stepCodeToIdMap[stepCode] = stepCode;
 
         // Map action IDs to names
-        const stepActions = step.WorkFlowStepAction?.map(action => 
+        const stepActions = step.WorkFlowStepAction?.map(action =>
           getActionNameFromId(action.ActionId)
         ) || [];
 
         // Map user IDs to names
-        const commonActions = step.WorkFlowStepUser?.map(user => 
+        const UserNames = step.WorkFlowStepUser?.map(user =>
           getUserNameFromId(user.UserId)
         ) || [];
 
@@ -605,7 +802,7 @@ const WorkflowEditor = forwardRef(
           nodeShape,
           position,
           stepActions,
-          commonActions
+          UserNames
         });
 
         // Create node with proper properties
@@ -623,7 +820,7 @@ const WorkflowEditor = forwardRef(
               ShortPurposeForForward: step.Properties?.ShortPurposeForForward || "",
               NodeShape: nodeShape,
               StepActions: stepActions,
-              CommonActions: commonActions
+              UserNames: UserNames
             }
           }
         });
@@ -634,7 +831,7 @@ const WorkflowEditor = forwardRef(
       workflowSteps.forEach((step) => {
         const sourceId = String(step.StepCode);
         const sourceNode = newNodes.find(n => n.id === sourceId);
-        
+
         if (!sourceNode) return;
 
         console.log(`\n🔄 Processing Transitions for Step ${sourceId}:`, {
@@ -647,27 +844,33 @@ const WorkflowEditor = forwardRef(
           step.WorkFlowStepTransition.forEach((transition) => {
             const targetId = String(transition.NextStepCode);
             const targetNode = newNodes.find(n => n.id === targetId);
-            
+
             if (!targetNode) return;
 
             // Get action name from ID
-            const actionName = getActionNameFromId(transition.ActionId);
+            const actionId = transition.ActionId || transition.label;
+
+            const actionName = getActionNameFromId(actionId);
 
             console.log(`\n🔗 Creating Edge:`, {
               source: sourceId,
               target: targetId,
-              fromHandle: transition.FromHandleId,
-              toHandle: transition.ToHandleId,
-              actionName
+              fromHandle: transition.FromHandleId || transition.sourceHandle,
+
+              toHandle: transition.ToHandleId || transition.targetHandle,
+
+              actionName,
+
+              actionId
             });
 
-            const sourceHandle = transition.FromHandleId || 
+            const sourceHandle = transition.FromHandleId || transition.sourceHandle || 
               (sourceNode.data.nodeShape === "Start" ? "Start-right-source" : "Step-right-source");
-            const targetHandle = transition.ToHandleId || 
+            const targetHandle = transition.ToHandleId || transition.targetHandle || 
               (targetNode.data.nodeShape === "Stop" ? "Stop-left-target" : "Step-left-target");
 
             newEdges.push({
-              id: `${sourceId}-${targetId}-${transition.ActionId || 'edge'}`,
+              id: `${sourceId}-${targetId}-${actionName || 'edge'}`,
               source: sourceId,
               target: targetId,
               sourceHandle,
@@ -681,16 +884,18 @@ const WorkflowEditor = forwardRef(
                 shortPurposeForForward: transition.ShortPurposeForForward || "",
                 purposeForForward: transition.PurposeForForward || "",
                 sourceHandle,
-                targetHandle
+                targetHandle,
+                actionName: actionName,
+                actionId: actionId
               }
             });
           });
         } else {
           console.log(`\n🔗 Creating Default Edge for Step ${sourceId}`);
-          
+
           const stopNodeId = `${sourceId}_STOP`;
           const stopNode = newNodes.find(n => n.id === stopNodeId);
-          
+
           if (stopNode) {
             const sourceHandle = sourceNode.data.nodeShape === "Start" ? "Start-right-source" : "Step-right-source";
             const targetHandle = "Stop-left-target";
@@ -807,7 +1012,7 @@ const WorkflowEditor = forwardRef(
         reactFlowInstance.fitView();
       }, 100);
     };
-    
+
     const generateJson = (excludeStartStop = false) => {
       const nodesCopy = [...getNodes()];
       const edgesCopy = [...getEdges()];
@@ -1097,7 +1302,7 @@ const WorkflowEditor = forwardRef(
                   StepName: nodeProperties.stepName || "",
                   PurposeForForward: nodeProperties.purposeForForward || "",
                   ShortPurposeForForward:
-                  nodeProperties.shortPurposeForForward || "",
+                    nodeProperties.shortPurposeForForward || "",
                   StepActions: nodeProperties.stepActions || [],
                   UserNames: nodeProperties.UserNames || [],
                   NodeShape: n.data.nodeShape,
@@ -1216,7 +1421,7 @@ const WorkflowEditor = forwardRef(
     };
 
     useEffect(() => {
-     // console.log("Current nodes state:", nodes);
+      // console.log("Current nodes state:", nodes);
     }, [nodes]);
 
     return (
