@@ -270,7 +270,6 @@ const WorkflowEditor = forwardRef(
         });
     }, [getUsers, apiUrls?.headers]);
 
-    
 
     useEffect(() => {
       if (selectedNode) {
@@ -317,6 +316,29 @@ const WorkflowEditor = forwardRef(
         convertJsonToWorkflow: convertJsonToWorkflow,
       };
     }, [getNodes, getEdges, nodes, edges]);
+
+    useEffect(() => {
+      // Handler for the custom event
+      const handleLoadWorkflow = (event) => {
+        if (event.detail) {
+          // You may need to adjust the path to the workflow steps depending on your JSON structure
+          convertJsonToWorkflow(event.detail);
+        }
+      };
+
+      // Get the DOM node for this component
+      const widgetElement = document.querySelector('react-widget');
+      if (widgetElement) {
+        widgetElement.addEventListener('load-workflow', handleLoadWorkflow);
+      }
+
+      // Cleanup
+      return () => {
+        if (widgetElement) {
+          widgetElement.removeEventListener('load-workflow', handleLoadWorkflow);
+        }
+      };
+    }, [convertJsonToWorkflow]);
 
     const handleKeyDown = useCallback(
       (e) => {
@@ -514,11 +536,27 @@ const WorkflowEditor = forwardRef(
       [allWorkflows]
     );
     const convertJsonToWorkflow = async (data) => {
-      console.log("🚨 Converting JSON to workflow:", data);
-      // Handle the actual data structure
+      console.log("📥 Incoming JSON Data:", JSON.stringify(data, null, 2));
+      
       const workflowSteps = data?.WorkFlowSteps || [];
-      console.log("🚨 Workflow steps:", workflowSteps);
-      if (!workflowSteps.length) return;
+      console.log("📋 Workflow Steps:", JSON.stringify(workflowSteps, null, 2));
+
+      if (!workflowSteps.length) {
+        console.warn("⚠️ No workflow steps found in the data");
+        return;
+      }
+
+      // Helper function to get action name from ID
+      const getActionNameFromId = (actionId) => {
+        const action = stepActionsOptions.find(a => a.ActionId === actionId);
+        return action ? action.ActionName : actionId;
+      };
+
+      // Helper function to get user name from ID
+      const getUserNameFromId = (userId) => {
+        const user = stepUsersOptions.find(u => u.UserId === userId);
+        return user ? user.UserName : userId;
+      };
 
       const stepCodeToIdMap = {};
       const newNodes = [];
@@ -548,121 +586,144 @@ const WorkflowEditor = forwardRef(
         const isStop = stepNameLower === "stop" || stepNameLower === "completed";
         stepCodeToIdMap[stepCode] = stepCode;
 
+        // Map action IDs to names
+        const stepActions = step.WorkFlowStepAction?.map(action => 
+          getActionNameFromId(action.ActionId)
+        ) || [];
+
+        // Map user IDs to names
+        const commonActions = step.WorkFlowStepUser?.map(user => 
+          getUserNameFromId(user.UserId)
+        ) || [];
+
+        console.log(`\n🏗️ Creating Node:`, {
+          id: stepCode,
+          label: isStop ? "Stop" : step.StepName || stepCode,
+          nodeShape,
+          position,
+          stepActions,
+          commonActions
+        });
+
+        // Create node with proper properties
         newNodes.push({
           id: stepCode,
           type: "custom",
           position,
           draggable: true,
           data: {
-            label: isStop ? "Completed" : step.StepName || stepCode,
+            label: isStop ? "Stop" : step.StepName || stepCode,
             nodeShape,
-            WorkFlowStepAction: (step.WorkFlowStepAction || []).map((item) => ({
-              Id: "",
-              ActionId: item.ActionId || item.Id,
-            })),
-            WorkFlowStepUser: (step.WorkFlowStepUser || []).map((item) => ({
-              Id: "",
-              UserId: item.UserId || item.Id,
-            })),
-            WorkFlowStepTransition: isStop
-              ? "Completed"
-              : step.StepName || stepCode,
             properties: {
-              PurposeForForward: isStop
-                ? ""
-                : step.Properties?.PurposeForForward || "",
-              ShortPurposeForForward: isStop
-                ? ""
-                : step.Properties?.ShortPurposeForForward || "",
+              StepName: step.StepName || stepCode,
+              PurposeForForward: step.Properties?.PurposeForForward || "",
+              ShortPurposeForForward: step.Properties?.ShortPurposeForForward || "",
               NodeShape: nodeShape,
-            },
-          },
-        });
-      });
-
-      // Step 2: Ensure each step has transition
-      const allStepCodes = new Set(workflowSteps.map((s) => String(s.StepCode)));
-      const anchorTargets = new Set();
-
-      workflowSteps.forEach((step) => {
-        if (!step.WorkFlowStepTransition || step.WorkFlowStepTransition.length === 0) {
-          const stopStepCode = `${step.StepCode}_STOP`;
-          anchorTargets.add(stopStepCode);
-          step.WorkFlowStepTransition = [
-            {
-              ActionName: "End",
-              ActionCode: "END",
-              NextStep: stopStepCode,
-            },
-          ];
-        } else {
-          step.WorkFlowStepTransition.forEach((action) => {
-            const targetStepCode = String(action.NextStepCode);
-            if (!allStepCodes.has(targetStepCode)) {
-              anchorTargets.add(targetStepCode);
+              StepActions: stepActions,
+              CommonActions: commonActions
             }
-          });
-        }
-      });
-
-      // Step 3: Add missing Stop nodes
-      anchorTargets.forEach((stepCode) => {
-        if (!stepCodeToIdMap[stepCode]) {
-          if (stepCode.endsWith("_STOP") && hasExplicitStop) return;
-
-          stepCodeToIdMap[stepCode] = stepCode;
-          newNodes.push({
-            id: stepCode,
-            type: "custom",
-            position: {
-              x: 300,
-              y: (newNodes.length + 1) * 100,
-            },
-            draggable: true,
-            data: {
-              label: "Completed",
-              nodeShape: "Stop",
-              properties: {
-                StepName: "Completed",
-                NodeShape: "Stop",
-              },
-            },
-          });
-        }
-      });
-
-      // Step 4: Generate and merge duplicate edges
-      let newEdges = generate_styled_edges(workflowSteps, stepCodeToIdMap, newNodes);
-    
-      const mergeDuplicateEdges = (edges) => {
-        const edgeMap = new Map();
-        edges.forEach((edge) => {
-          const key = `${edge.source}-${edge.target}`;
-          if (edgeMap.has(key)) {
-            const existing = edgeMap.get(key);
-            const mergedLabel = [existing.label, edge.label]
-              .filter(Boolean)
-              .filter((v, i, a) => a.indexOf(v) === i)
-              .join(" / ");
-            edgeMap.set(key, {
-              ...existing,
-              label: mergedLabel,
-            });
-          } else {
-            edgeMap.set(key, edge);
           }
         });
-        return Array.from(edgeMap.values());
-      };
-    
-      newEdges = mergeDuplicateEdges(newEdges);
-    
-      // Step 5: Add Start node if not found
+      });
+
+      // Step 2: Generate edges with proper handles
+      const newEdges = [];
+      workflowSteps.forEach((step) => {
+        const sourceId = String(step.StepCode);
+        const sourceNode = newNodes.find(n => n.id === sourceId);
+        
+        if (!sourceNode) return;
+
+        console.log(`\n🔄 Processing Transitions for Step ${sourceId}:`, {
+          transitions: step.WorkFlowStepTransition,
+          sourceNode: sourceNode.data.label
+        });
+
+        // Handle transitions
+        if (step.WorkFlowStepTransition && step.WorkFlowStepTransition.length > 0) {
+          step.WorkFlowStepTransition.forEach((transition) => {
+            const targetId = String(transition.NextStepCode);
+            const targetNode = newNodes.find(n => n.id === targetId);
+            
+            if (!targetNode) return;
+
+            // Get action name from ID
+            const actionName = getActionNameFromId(transition.ActionId);
+
+            console.log(`\n🔗 Creating Edge:`, {
+              source: sourceId,
+              target: targetId,
+              fromHandle: transition.FromHandleId,
+              toHandle: transition.ToHandleId,
+              actionName
+            });
+
+            const sourceHandle = transition.FromHandleId || 
+              (sourceNode.data.nodeShape === "Start" ? "Start-right-source" : "Step-right-source");
+            const targetHandle = transition.ToHandleId || 
+              (targetNode.data.nodeShape === "Stop" ? "Stop-left-target" : "Step-left-target");
+
+            newEdges.push({
+              id: `${sourceId}-${targetId}-${transition.ActionId || 'edge'}`,
+              source: sourceId,
+              target: targetId,
+              sourceHandle,
+              targetHandle,
+              label: actionName || "",
+              animated: false,
+              type: "customSmooth",
+              markerEnd: { type: MarkerType.ArrowClosed },
+              style: { strokeWidth: 2, stroke: "#333" },
+              data: {
+                shortPurposeForForward: transition.ShortPurposeForForward || "",
+                purposeForForward: transition.PurposeForForward || "",
+                sourceHandle,
+                targetHandle
+              }
+            });
+          });
+        } else {
+          console.log(`\n🔗 Creating Default Edge for Step ${sourceId}`);
+          
+          const stopNodeId = `${sourceId}_STOP`;
+          const stopNode = newNodes.find(n => n.id === stopNodeId);
+          
+          if (stopNode) {
+            const sourceHandle = sourceNode.data.nodeShape === "Start" ? "Start-right-source" : "Step-right-source";
+            const targetHandle = "Stop-left-target";
+
+            newEdges.push({
+              id: `${sourceId}-${stopNodeId}-default`,
+              source: sourceId,
+              target: stopNodeId,
+              sourceHandle,
+              targetHandle,
+              label: "End",
+              animated: false,
+              type: "customSmooth",
+              markerEnd: { type: MarkerType.ArrowClosed },
+              style: { strokeWidth: 2, stroke: "#333" },
+              data: {
+                shortPurposeForForward: "",
+                purposeForForward: "",
+                sourceHandle,
+                targetHandle
+              }
+            });
+          }
+        }
+      });
+
+      // Log final nodes and edges
+      console.log("\n📊 Final Nodes:", JSON.stringify(newNodes, null, 2));
+      console.log("\n🔗 Final Edges:", JSON.stringify(newEdges, null, 2));
+
+      // Step 3: Add Start node if not found
       const hasStart = newNodes.some((n) => n.data.nodeShape === "Start");
       if (!hasStart && newNodes.length > 0) {
         const firstNode = newNodes[0];
         const startNodeId = "sys_start";
-    
+
         newNodes.unshift({
           id: startNodeId,
           type: "custom",
@@ -676,54 +737,48 @@ const WorkflowEditor = forwardRef(
             nodeShape: "Start",
             properties: {
               StepName: "Start",
-              NodeShape: "Start",
-            },
-          },
+              NodeShape: "Start"
+            }
+          }
         });
-    
+
+        const sourceHandle = "Start-right-source";
+        const targetHandle = firstNode.data.nodeShape === "Stop" ? "Stop-left-target" : "Step-left-target";
+
         newEdges.unshift({
           id: `${startNodeId}-${firstNode.id}-StartEdge`,
           source: startNodeId,
           target: firstNode.id,
+          sourceHandle,
+          targetHandle,
           markerEnd: { type: MarkerType.ArrowClosed },
           animated: false,
           type: "customSmooth",
           style: { strokeWidth: 2, stroke: "#333" },
+          data: {
+            shortPurposeForForward: "",
+            purposeForForward: "",
+            sourceHandle,
+            targetHandle
+          }
         });
-    
+
         stepCodeToIdMap[startNodeId] = startNodeId;
       }
-    
-      // Step 6: Position layout
+
+      // Step 4: Position layout
       const allHavePositions = newNodes.every(
         (n) => typeof n.position?.x === "number" && typeof n.position?.y === "number"
       );
       const finalNodes = allHavePositions
         ? newNodes
         : await layoutTopDownCustom(newNodes, newEdges, "TB");
-    
-      // Step 7: Color edges
-      const coloredEdges = newEdges.map((edge) => {
-        let stroke = "#333";
-        if (selectedNode) {
-          if (edge.source === selectedNode.id) stroke = "green";
-          else if (edge.target === selectedNode.id) stroke = "red";
-        }
-        return {
-          ...edge,
-          style: {
-            ...(edge.style || {}),
-            stroke,
-            strokeWidth: 2,
-          },
-        };
-      });
-    
-      // Step 8: Update state
+
+      // Step 5: Update state
       setNodes(finalNodes);
-      setEdges(coloredEdges);
-    
-      // Step 9: Center canvas
+      setEdges(newEdges);
+
+      // Step 6: Center canvas
       setTimeout(() => {
         const bounds = finalNodes.reduce(
           (acc, node) => {
@@ -735,16 +790,16 @@ const WorkflowEditor = forwardRef(
           },
           { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity }
         );
-    
+
         const centerX = (bounds.minX + bounds.maxX) / 2;
         const centerY = (bounds.minY + bounds.maxY) / 2;
-    
+
         setViewport({
           x: window.innerWidth / 2 - centerX,
           y: window.innerHeight / 2 - centerY,
           zoom: 0.75,
         });
-    
+
         // Force canvas re-center
         reactFlowInstance.fitView();
       }, 100);
@@ -1158,7 +1213,7 @@ const WorkflowEditor = forwardRef(
     };
 
     useEffect(() => {
-      console.log("Current nodes state:", nodes);
+     // console.log("Current nodes state:", nodes);
     }, [nodes]);
 
     return (
@@ -1558,39 +1613,55 @@ const WorkflowEditor = forwardRef(
           </ReactFlow>
           <EdgeLabelRenderer>
             {edges
-              .filter((edge) => edge.id === hoveredEdgeId && (edge.label || edge.data?.shortPurposeForForward || edge.data?.purposeForForward))
+              .filter(
+                (edge) =>
+                  edge.id === hoveredEdgeId &&
+                  (edge.label ||
+                    edge.data?.shortPurposeForForward ||
+                    edge.data?.purposeForForward)
+              )
               .map((edge) => {
                 const sourceNode = nodes.find((n) => n.id === edge.source);
                 const targetNode = nodes.find((n) => n.id === edge.target);
                 if (!sourceNode || !targetNode) return null;
 
-                const edgeCenterX = (sourceNode.position.x + targetNode.position.x) / 2 + 75;
-                const edgeCenterY = (sourceNode.position.y + targetNode.position.y) / 2 + 10; // Changed from 30 to 10 to move up
+                const edgeCenterX =
+                  (sourceNode.position.x + targetNode.position.x) / 2 + 75;
+                const edgeCenterY =
+                  (sourceNode.position.y + targetNode.position.y) / 2 + 10; // Changed from 30 to 10 to move up
 
                 return (
                   <div
                     key={`tooltip-${edge.id}`}
                     style={{
-                      position: 'absolute',
+                      position: "absolute",
                       transform: `translate(-50%, -100%) translate(${edgeCenterX}px, ${edgeCenterY}px)`, // Changed from -50% to -100% to position above
-                      background: '#fefce8',
-                      color: 'black',
-                      padding: '6px 10px',
-                      borderRadius: '6px',
-                      fontSize: '12px',
-                      whiteSpace: 'pre-line',
-                      maxWidth: '240px',
+                      background: "#fefce8",
+                      color: "black",
+                      padding: "6px 10px",
+                      borderRadius: "6px",
+                      fontSize: "12px",
+                      whiteSpace: "pre-line",
+                      maxWidth: "240px",
                       zIndex: 999,
-                      pointerEvents: 'none',
-                      boxShadow: '0 4px 10px rgba(0,0,0,0.3)',
+                      pointerEvents: "none",
+                      boxShadow: "0 4px 10px rgba(0,0,0,0.3)",
                     }}
                   >
-                    {edge.label && <div><strong>{edge.label}</strong></div>}
+                    {edge.label && (
+                      <div>
+                        <strong>{edge.label}</strong>
+                      </div>
+                    )}
                     {edge?.data?.shortPurposeForForward && (
-                      <div><em>{edge.data.shortPurposeForForward}</em></div>
+                      <div>
+                        <em>{edge.data.shortPurposeForForward}</em>
+                      </div>
                     )}
                     {edge?.data?.purposeForForward && (
-                      <div style={{ marginTop: '4px' }}>{edge.data.purposeForForward}</div>
+                      <div style={{ marginTop: "4px" }}>
+                        {edge.data.purposeForForward}
+                      </div>
                     )}
                   </div>
                 );
@@ -1723,9 +1794,9 @@ const WorkflowEditor = forwardRef(
                 Select Edge Action:
               </label>
               <Select
-                options={stepActionsOptions.map(action => ({
+                options={stepActionsOptions.map((action) => ({
                   label: action.ActionName,
-                  value: action.ActionName
+                  value: action.ActionName,
                 }))}
                 value={{ label: selectedEdge.label, value: selectedEdge.label }}
                 onChange={(selected) => updateEdgeLabel(selected.value)}
@@ -1944,24 +2015,28 @@ const WorkflowEditor = forwardRef(
               isMulti
               closeMenuOnSelect={false}
               hideSelectedOptions={false}
-              options={stepActionsOptions.map(action => ({
+              options={stepActionsOptions.map((action) => ({
                 label: action.ActionName,
-                value: action.ActionName
+                value: action.ActionName,
               }))}
-              value={nodeProperties.stepActions?.map(actionName => ({
-                label: actionName,
-                value: actionName
-              })) || []}
+              value={
+                nodeProperties.stepActions?.map((actionName) => ({
+                  label: actionName,
+                  value: actionName,
+                })) || []
+              }
               onChange={(selected) =>
                 setNodeProperties((prev) => ({
                   ...prev,
-                  stepActions: selected ? selected.map((item) => item.value) : [],
+                  stepActions: selected
+                    ? selected.map((item) => item.value)
+                    : [],
                 }))
               }
               styles={{
                 control: (base) => ({
                   ...base,
-                  fontSize: "14px"
+                  fontSize: "14px",
                 }),
                 option: (base, state) => ({
                   ...base,
@@ -1969,20 +2044,20 @@ const WorkflowEditor = forwardRef(
                   backgroundColor: state.isSelected ? "#e2e8f0" : "white",
                   color: "black",
                   "&:hover": {
-                    backgroundColor: "#f1f5f9"
-                  }
+                    backgroundColor: "#f1f5f9",
+                  },
                 }),
                 multiValue: (base) => ({
                   ...base,
                   backgroundColor: "#e2e8f0",
                   borderRadius: "4px",
-                  margin: "2px"
+                  margin: "2px",
                 }),
                 multiValueLabel: (base) => ({
                   ...base,
                   color: "black",
-                  padding: "4px 8px"
-                })
+                  padding: "4px 8px",
+                }),
               }}
               components={{
                 Option: ({ children, ...props }) => (
@@ -1991,7 +2066,7 @@ const WorkflowEditor = forwardRef(
                       display: "flex",
                       alignItems: "center",
                       padding: "8px",
-                      cursor: "pointer"
+                      cursor: "pointer",
                     }}
                     onClick={() => props.selectOption(props.data)}
                   >
@@ -2003,7 +2078,7 @@ const WorkflowEditor = forwardRef(
                     />
                     {children}
                   </div>
-                )
+                ),
               }}
             />
 
@@ -2013,24 +2088,28 @@ const WorkflowEditor = forwardRef(
               isMulti
               closeMenuOnSelect={false}
               hideSelectedOptions={false}
-              options={stepUsersOptions.map(user => ({
+              options={stepUsersOptions.map((user) => ({
                 label: user.UserName,
-                value: user.UserName
+                value: user.UserName,
               }))}
-              value={nodeProperties.commonActions?.map(userName => ({
-                label: userName,
-                value: userName
-              })) || []}
+              value={
+                nodeProperties.commonActions?.map((userName) => ({
+                  label: userName,
+                  value: userName,
+                })) || []
+              }
               onChange={(selected) =>
                 setNodeProperties((prev) => ({
                   ...prev,
-                  commonActions: selected ? selected.map((item) => item.value) : [],
+                  commonActions: selected
+                    ? selected.map((item) => item.value)
+                    : [],
                 }))
               }
               styles={{
                 control: (base) => ({
                   ...base,
-                  fontSize: "14px"
+                  fontSize: "14px",
                 }),
                 option: (base, state) => ({
                   ...base,
@@ -2038,20 +2117,20 @@ const WorkflowEditor = forwardRef(
                   backgroundColor: state.isSelected ? "#e2e8f0" : "white",
                   color: "black",
                   "&:hover": {
-                    backgroundColor: "#f1f5f9"
-                  }
+                    backgroundColor: "#f1f5f9",
+                  },
                 }),
                 multiValue: (base) => ({
                   ...base,
                   backgroundColor: "#e2e8f0",
                   borderRadius: "4px",
-                  margin: "2px"
+                  margin: "2px",
                 }),
                 multiValueLabel: (base) => ({
                   ...base,
                   color: "black",
-                  padding: "4px 8px"
-                })
+                  padding: "4px 8px",
+                }),
               }}
             />
 

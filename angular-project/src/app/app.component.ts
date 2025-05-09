@@ -95,7 +95,6 @@ const employeesResponse = {
   ]
 };
 
-
 @Component({
   selector: 'app-root',
   standalone: true,
@@ -136,32 +135,38 @@ export class AppComponent implements AfterViewInit {
     }, 300);
   }
   loadWorkflow() {
-    const maxAttempts = 10;
-    let attempts = 0;
-  
-    const tryLoad = () => {
-      const storedJson = localStorage.getItem('ModifyWorkflowJson');
-      const convertFn = (window as any).reactwidgetRef?.convertJsonToWorkflow;
-  
-      if (typeof convertFn === 'function' && storedJson) {
-        try {
-          const parsedJson = JSON.parse(storedJson);
-          convertFn(parsedJson);
-          console.log("✅ Loaded and sent workflow JSON to React:", parsedJson);
-        } catch (err) {
-          console.error("❌ Failed to parse ModifyWorkflowJson:", err);
-        }
+    console.log("🚨 Loading workflow from localStorage...");
+    
+    // First ensure widget is initialized
+    if (!(window as any).reactwidgetRef?.isInitialized) {
+      console.log("Initializing widget first...");
+      this.initializeReactWidget();
+      // Wait for initialization to complete
+      setTimeout(() => this.loadWorkflow(), 1500);
+      return;
+    }
+
+    const storedJson = localStorage.getItem('ModifyWorkflowJson');
+    if (!storedJson) {
+      console.warn("⚠️ No workflow found in localStorage");
+      return;
+    }
+
+    try {
+      const parsedJson = JSON.parse(storedJson);
+      const reactwidgetRef = (window as any).reactwidgetRef;
+      
+      if (reactwidgetRef?.convertJsonToWorkflow) {
+        console.log("Found convertJsonToWorkflow function, attempting to load workflow");
+        reactwidgetRef.convertJsonToWorkflow(parsedJson);
+        console.log("✅ Loaded workflow into React widget:", parsedJson);
       } else {
-        attempts++;
-        if (attempts < maxAttempts) {
-          setTimeout(tryLoad, 300); // retry in 300ms
-        } else {
-          console.error("❌ convertJsonToWorkflow not ready after retries.");
-        }
+        console.error("❌ Widget not properly initialized - convertJsonToWorkflow function not found");
+        console.log("Available functions:", Object.keys(reactwidgetRef || {}));
       }
-    };
-  
-    tryLoad();
+    } catch (err) {
+      console.error("❌ Failed to parse or load workflow:", err);
+    }
   }
   initializeReactWidget() {
     const container = document.getElementById('react-widget-container');
@@ -172,6 +177,7 @@ export class AppComponent implements AfterViewInit {
     }
 
     const reactwidget = (window as any).reactwidget;
+    const widgetElement = document.querySelector('react-widget');
 
     const jwtToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzaWQiOiI1OWNmZGM3OC01NWZjLTQxMDEtOWE1Yy0yNTQ5MzkxNDQyNzQiLCJ0ZWQiOiIxLzEvMDAwMSAxMjowMDowMCBBTSIsIm5iZiI6MTc0NjYxNzM2MSwiZXhwIjoxNzQ2NzAzNzYxLCJpYXQiOjE3NDY2MTczNjF9.sRnEMsPxpGvLp3LJbkBzWiWVd00gS0uYVYI4hie84xY';
     localStorage.setItem('jwtToken', jwtToken);
@@ -192,7 +198,6 @@ export class AppComponent implements AfterViewInit {
       getUsers: () => Promise.resolve(employeesResponse),
       getWorkflows: 'https://app.jassi.me/workflows',
       saveWorkflow: 'https://app.jassi.me/seed',
-      loadWorkflow: 'https://app.jassi.me/get',
       headers: {
         Authorization: `Bearer ${jwtToken}`,
         'Content-Type': 'application/json'
@@ -222,9 +227,93 @@ export class AppComponent implements AfterViewInit {
       }
     });
 
+    try {
+      // Initialize the widget
+      reactwidget.initialise();
+      
+      // Wait for a short time to ensure widget is fully initialized
+      setTimeout(() => {
+        if (!widgetElement) {
+          console.error("❌ React widget element not found");
+          return;
+        }
 
-    reactwidget.initialise();
+        // Set up the widget reference with initialization flag and functions
+        (window as any).reactwidgetRef = {
+          ...(window as any).reactwidgetRef,
+          isInitialized: true,
+          convertJsonToWorkflow: (json: any) => {
+            console.log("Converting JSON to workflow:", json);
+            try {
+              // Try to dispatch a custom event to the widget
+              const event = new CustomEvent('load-workflow', {
+                detail: json,
+                bubbles: true,
+                composed: true
+              });
+              widgetElement.dispatchEvent(event);
+              console.log("✅ Dispatched load-workflow event");
+            } catch (err) {
+              console.error("❌ Error dispatching load-workflow event:", err);
+            }
+          },
+          viewJson: () => {
+            try {
+              // Try to dispatch a custom event to get the JSON
+              const event = new CustomEvent('get-workflow-json', {
+                bubbles: true,
+                composed: true
+              });
+              widgetElement.dispatchEvent(event);
+              console.log("✅ Dispatched get-workflow-json event");
+              return null; // The React component should handle the event and save to localStorage
+            } catch (err) {
+              console.error("❌ Error dispatching get-workflow-json event:", err);
+              return null;
+            }
+          }
+        };
+        
+        console.log("✅ React widget initialized successfully with functions:", 
+          Object.keys((window as any).reactwidgetRef));
+      }, 1000);
+      
+    } catch (error) {
+      console.error("❌ Failed to initialize React widget:", error);
+    }
+  }
+
+  // New method to load workflow from API
+  loadWorkflowFromApi(workflowId: string) {
+    console.log("🚨 Loading workflow from API...");
     
+    // First ensure widget is initialized
+    if (!(window as any).reactwidgetRef?.isInitialized) {
+      console.log("Initializing widget first...");
+      this.initializeReactWidget();
+    }
+
+    // Fetch workflow data from API
+    const jwtToken = localStorage.getItem('jwtToken');
+    fetch(`https://app.jassi.me/workflows/${workflowId}`, {
+      headers: {
+        'Authorization': `Bearer ${jwtToken}`,
+        'Content-Type': 'application/json'
+      }
+    })
+    .then(response => response.json())
+    .then(workflowData => {
+      console.log("✅ Received workflow data:", workflowData);
+      
+      // Store the workflow data
+      localStorage.setItem('ModifyWorkflowJson', JSON.stringify(workflowData));
+      
+      // Load the workflow in the widget
+      this.loadWorkflow();
+    })
+    .catch(error => {
+      console.error("❌ Failed to fetch workflow:", error);
+    });
   }
 
   closeModal() {
