@@ -231,20 +231,22 @@ const WorkflowEditor = forwardRef(
       // Handle getActions as a function
       Promise.resolve(getActions())
         .then((data) => {
+          console.log("📥 Raw Actions Response:", data);
           if (data?.ReturnCode === 0 && Array.isArray(data.Data)) {
             const formattedActions = data.Data.map((action) => ({
               ActionId: action.Id,
               ActionName: action.Name,
               ActionCode: action.Code,
             }));
+            console.log("📋 Formatted Actions:", formattedActions);
             setStepActionsOptions(formattedActions);
           } else {
-            console.warn("No action data received");
+            console.warn("⚠️ No action data received or invalid format:", data);
             setStepActionsOptions([]);
           }
         })
         .catch((err) => {
-          console.error("Failed to get actions", err);
+          console.error("❌ Failed to get actions:", err);
           setStepActionsOptions([]);
         });
     }, [getActions]);
@@ -258,6 +260,7 @@ const WorkflowEditor = forwardRef(
               UserId: user.Id,
               UserName: user.Name,
             }));
+            console.log("👥 Loaded Users:", userOptions);
             setStepUsersOptions(userOptions);
           } else {
             console.warn("No user data received");
@@ -288,8 +291,8 @@ const WorkflowEditor = forwardRef(
             })
             : [],
 
-          commonActions: Array.isArray(props.CommonActions)
-            ? props.CommonActions.map((name) => {
+          UserNames: Array.isArray(props.UserNames)
+            ? props.UserNames.map((name) => {
               const found = stepUsersOptions.find((u) => u.UserName === name);
               return found?.UserName || name;
             })
@@ -921,7 +924,7 @@ const WorkflowEditor = forwardRef(
               const action = resolveAction(edge.label);
               return {
                 Id: "",
-                ActionId: action?.ActionId || "Unknown",
+                ActionId: action?.ActionId,
                 NextStepCode: "step" + stepCodeMap[edge.target],
                 FromHandleId: edge.sourceHandle || "",
                 ToHandleId: edge.targetHandle || "",
@@ -942,7 +945,7 @@ const WorkflowEditor = forwardRef(
                 ActionId: found?.ActionId || actionName || "Unknown",
               };
             }),
-            WorkFlowStepUser: (props.CommonActions || []).map((userName) => {
+            WorkFlowStepUser: (props.UserNames || []).map((userName) => {
               const found = stepUsersOptions.find(
                 (u) => u.UserName === userName
               );
@@ -1051,8 +1054,8 @@ const WorkflowEditor = forwardRef(
         stepActions: Array.isArray(props.StepActions)
           ? props.StepActions
           : [],
-        commonActions: Array.isArray(props.CommonActions)
-          ? props.CommonActions
+        UserNames: Array.isArray(props.UserNames)
+          ? props.UserNames
           : [],
         purposeForForward: props.PurposeForForward || "",
         shortPurposeForForward: props.ShortPurposeForForward || "",
@@ -1094,9 +1097,9 @@ const WorkflowEditor = forwardRef(
                   StepName: nodeProperties.stepName || "",
                   PurposeForForward: nodeProperties.purposeForForward || "",
                   ShortPurposeForForward:
-                    nodeProperties.shortPurposeForForward || "",
+                  nodeProperties.shortPurposeForForward || "",
                   StepActions: nodeProperties.stepActions || [],
-                  CommonActions: nodeProperties.commonActions || [],
+                  UserNames: nodeProperties.UserNames || [],
                   NodeShape: n.data.nodeShape,
                 },
               },
@@ -2093,7 +2096,7 @@ const WorkflowEditor = forwardRef(
                 value: user.UserName,
               }))}
               value={
-                nodeProperties.commonActions?.map((userName) => ({
+                nodeProperties.UserNames?.map((userName) => ({
                   label: userName,
                   value: userName,
                 })) || []
@@ -2101,7 +2104,7 @@ const WorkflowEditor = forwardRef(
               onChange={(selected) =>
                 setNodeProperties((prev) => ({
                   ...prev,
-                  commonActions: selected
+                  UserNames: selected
                     ? selected.map((item) => item.value)
                     : [],
                 }))
