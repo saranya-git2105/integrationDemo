@@ -36,8 +36,8 @@ import {
   FiSave,
   FiRotateCcw,
   FiRefreshCw,
+  FiGrid,
 } from "react-icons/fi";
-import CanvasControls from "./CanvasControls"; // adjust path as needed
 
 Modal.setAppElement(document.querySelector(".container"));
 const nodeWidth = 150;
@@ -1745,52 +1745,32 @@ const WorkflowEditor = forwardRef(
             defaultViewport={{ x: 0, y: 0, zoom: 1 }}
             style={{ background: "#F5F5F5" }}
           >
-            <CanvasControls
-              backgroundVariant={backgroundVariant}
-              setBackgroundVariant={setBackgroundVariant}
-            />
-            <MiniMap
-              nodeColor={(node) => {
-                switch (node.data?.nodeShape) {
-                  case "Start":
-                    return "#9fda7c";
-                  case "Stop":
-                    return "#FFB7B4";
-                  case "Step":
-                    return "#82d6f7";
-                  case "Decision":
-                    return "#B388EB";
-                  default:
-                    return "#82d6f7";
-                }
-              }}
-              nodeStrokeWidth={2}
-              nodeBorderRadius={3}
-              maskColor="rgba(255,255,255,0.6)"
-              style={{
-                height: 107,
-                width: 200,
-                border: "1px solid #ccc",
-                bottom: 10,
-                right: 30,
-                zIndex: 20,
-              }}
-            />
             <Controls
               position="top-right"
+              showInteractive={false}
               style={{
-                zIndex: 10, // Make sure it shows above everything
+                zIndex: 10,
                 marginRight: 10,
                 marginTop: 469,
               }}
             >
-              {" "}
               <ControlButton
                 title={isLocked ? "Unlock Canvas" : "Lock Canvas"}
                 onClick={() => setIsLocked((prev) => !prev)}
               >
                 {isLocked ? <FaLock color="#333" /> : <FaUnlock color="#333" />}
-              </ControlButton>{" "}
+              </ControlButton>
+              <ControlButton
+                title="Toggle Background"
+                onClick={() => {
+                  const variants = ['dots', 'lines', 'cross', 'solid'];
+                  const currentIndex = variants.indexOf(backgroundVariant);
+                  const nextIndex = (currentIndex + 1) % variants.length;
+                  setBackgroundVariant(variants[nextIndex]);
+                }}
+              >
+                <FiGrid color="#333" />
+              </ControlButton>
             </Controls>
             {backgroundVariant !== "solid" && (
               <Background
@@ -1819,6 +1799,33 @@ const WorkflowEditor = forwardRef(
               </div>
             )}
           </ReactFlow>
+          <MiniMap
+            nodeColor={(node) => {
+              switch (node.data?.nodeShape) {
+                case "Start":
+                  return "#9fda7c";
+                case "Stop":
+                  return "#FFB7B4";
+                case "Step":
+                  return "#82d6f7";
+                case "Decision":
+                  return "#B388EB";
+                default:
+                  return "#82d6f7";
+              }
+            }}
+            nodeStrokeWidth={2}
+            nodeBorderRadius={3}
+            maskColor="rgba(255,255,255,0.6)"
+            style={{
+              height: 107,
+              width: 200,
+              border: "1px solid #ccc",
+              bottom: 10,
+              right: 30,
+              zIndex: 20,
+            }}
+          />
           <EdgeLabelRenderer>
             {edges
               .filter(
