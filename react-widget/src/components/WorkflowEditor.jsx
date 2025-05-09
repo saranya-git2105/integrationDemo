@@ -1429,7 +1429,7 @@ const WorkflowEditor = forwardRef(
         style={{
           paddingTop: "0px",
           height: "100vh",
-          width: "100vw",
+          width: "100%",
           display: "flex",
           background: "#e2e8f0",
         }}
