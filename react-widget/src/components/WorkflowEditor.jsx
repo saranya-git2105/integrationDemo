@@ -1931,7 +1931,7 @@ const WorkflowEditor = forwardRef(
           isOpen={modalIsOpen}
           onRequestClose={() => setModalIsOpen(false)}
           parentSelector={() => document.querySelector(".container")}
-          className="modal-content"
+          className="modal-content node-properties-modal"
         >
           <h2 className="modal-header">Node Properties</h2>
 
