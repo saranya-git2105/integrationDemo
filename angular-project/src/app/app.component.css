@@ -13,7 +13,7 @@
   /* Fullscreen styles */
   :fullscreen .widget-container,
   :-webkit-full-screen .widget-container {
-    width: 100vw !important;
+    width: 100vh !important;
     height: 100vh !important;
   }
   

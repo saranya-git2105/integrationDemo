@@ -1,0 +1,577 @@
+/* Main container styles */
+.workflow-editor-container {
+  padding-top: 0px;
+  height: 100vh;
+  width: 100%;
+  display: flex;
+  background: #e2e8f0;
+  flex-direction: row;
+  position: relative;
+}
+
+/* Sidebar styles */
+.workflow-sidebar {
+  width: 250px;
+  background: #ffffff;
+  border-right: 1px solid #e2e8f0;
+  padding: 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  overflow-y: auto;
+  height: 100%;
+}
+
+.sidebar-title {
+  display: flex;
+  margin: 0;
+  text-align: center;
+  color: #0284c7;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.sidebar-controls {
+  position: unset;
+  display: flex;
+  gap: 4px;
+}
+
+.control-button {
+  background: #e2e8f0;
+  border-radius: 50%;
+  padding: 0;
+  cursor: pointer;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  transition: background 0.2s;
+}
+
+.control-button svg {
+  width: 15px;
+  height: 15px;
+}
+
+.node-types-container {
+  display: flex;
+  flex-direction: column;
+  gap: 18px 0;
+  background: #ffffff;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid #cbd5e1;
+}
+
+.node-types-title {
+  font-weight: bold;
+  margin: 0;
+  color: #0ea5e9;
+  font-size: 18px;
+}
+
+.node-type-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  /* margin-bottom: 14px; */
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+  font-size: 18px;
+  padding: 0 5px;
+  border-radius: 20px;
+  min-width: 44px;
+  /* min-height: 44px; */
+}
+.node-type-item span{
+  font-size: 18px !important;
+}
+.node-type-shape {
+  width: 28px;
+  height: 28px;
+  margin-left: 10px;
+}
+
+.node-type-shape.circle {
+  border-radius: 50%;
+}
+
+.node-type-shape.diamond {
+  transform: rotate(45deg);
+}
+
+.sidebar-button {
+  display: none;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12px;
+  font-size: 18px;
+  padding: 12px 18px;
+  margin-top: 5px;
+  border: none;
+  border-radius: 24px;
+  cursor: pointer;
+  transition: 0.2s;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+  line-height: 1;
+  min-width: 44px;
+  min-height: 44px;
+}
+
+.sidebar-button-icon {
+  display: flex;
+  align-items: center;
+  margin-left: 35px;
+}
+
+.sidebar-button-text {
+  font-weight: 500;
+}
+
+/* Workflow editor area */
+.workflow-editor-area {
+  padding-top: 0;
+  flex-grow: 1;
+  height: 100vh;
+  position: relative;
+  overflow: hidden;
+}
+
+.workflow-meta-display {
+  position: absolute;
+  top: 10px;
+  left: 240px;
+  padding: 8px 16px;
+  background: #0284c7;
+  color: #fff;
+  border-radius: 8px;
+  z-index: 20;
+  font-size: 14px;
+  font-weight: bold;
+}
+
+/* Modal styles */
+.modal-header {
+  text-align: center;
+  margin-bottom: 15px;
+  margin-top: 0;
+  font-weight: bold;
+  font-size: 20px;
+  color: #1e293b;
+}
+
+.modal-label {
+  font-weight: bold;
+  font-size: 14px;
+  color: #374151;
+}
+
+.modal-input,.modal-select {
+  font-size: 14px;
+  padding: 8px;
+  border-radius: 5px;
+  border: 1px solid #ccc;
+  margin-top: 5px;
+  outline: none !important;
+  /* width: 100%; */
+}
+
+.modal-content {
+  font-size: 14px;
+  color: #374151;
+  width: 400px;
+  background-color: #fff;
+  max-height: fit-content;
+  margin: auto;  
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  opacity: 1;
+}
+
+/* .modal-button {
+  height: 40px;
+  min-width: 110px;
+  padding: 10px 15px;
+  font-size: 14px;
+  font-weight: 500;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+} */
+ .modal-button{
+  /* height: 40px; */
+   border-radius: 7px;
+   min-width: 130px;
+   max-width: 200px;
+   display: flex;
+   justify-content: center;
+   align-items: center;
+   outline: none;
+   font-size: 14px;
+   font-weight: 500;
+   padding: 0 15px;
+ }
+
+.modal-container {
+  width: 100%;
+  height: fit-content;
+  max-height: 600px;
+  margin: auto;
+  padding: 15px;
+  border-radius: 10px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-overlay {
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
+.modal-content-container {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+
+  gap: 15px 0;
+  /* overflow-y: auto; */
+  padding-right: 0;
+  /* flex: 1; */
+}
+
+.modal-buttons-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 0;
+  gap: 0 10px;
+}
+
+.modal-button-save {
+    border: 1px solid #00d25b;
+    color: #fff;
+    background-color: #00d25b;
+}
+
+.modal-button-cancel {
+  border: 1px solid #bcbcbc;
+    color: #727272;
+    background-color: #fff;
+}
+
+.modal-button-continue {
+  background: #10b981;
+  color: white;
+}
+
+.modal-textarea {
+  height: 60px;
+  resize: vertical;
+}
+
+.modal-select {
+  font-size: 14px;
+}
+
+.modal-select-option {
+  font-size: 14px;
+  background-color: white;
+  color: black;
+}
+
+.modal-select-option:hover {
+  background-color: #f1f5f9;
+}
+
+.modal-select-multi-value {
+  background-color: #e2e8f0;
+  border-radius: 4px;
+  margin: 2px;
+}
+
+.modal-select-multi-value-label {
+  color: black;
+  padding: 4px 8px;
+}
+
+.modal-select-checkbox {
+  margin-right: 8px;
+}
+
+/* Context menu styles */
+.context-menu {
+  position: absolute;
+  background: white;
+  border: 1px solid black;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  padding: 10px;
+  z-index: 1000;
+  min-width: 140px;
+}
+
+.context-menu-item {
+  cursor: pointer;
+  margin-bottom: 5px;
+}
+
+/* Toast notification */
+.locked-toast {
+  position: absolute;
+  top: 70px;
+  right: 20px;
+  background-color: #f87171;
+  color: #fff;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+  z-index: 30;
+  animation: fadeInOut 2s ease;
+}
+.css-t3ipsp-control{
+  border-color: unset !important;
+  box-shadow: none !important;
+}
+.css-t3ipsp-control:hover{
+  border-color: unset !important;
+}
+@keyframes fadeInOut {
+  0% { opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* Edge tooltip */
+.edge-tooltip {
+  position: absolute;
+  background: #fefce8;
+  color: black;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  white-space: pre-line;
+  max-width: 240px;
+  z-index: 999;
+  pointer-events: none;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+}
+
+/* Selection indicator */
+.selection-indicator {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #0f172a;
+  color: #fff;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 14px;
+  z-index: 50;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+}
+.flowchart-header{
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+.form-input-section{
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  width: 100%;
+}
+.form-input-section label{
+  width: 100%;
+  text-align: left;
+}
+.form-input-section .modal-input{
+  width: 96%;
+  padding: 0 8px !important;
+}
+.form-input-section .modal-select{
+  width: 100%;
+  padding: 0;
+  border: 0;
+}
+.ReactModal__Overlay--after-open{
+  background-color: #00000091 !important;
+  display: flex;
+  padding: 20px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+.common-form-field-height{
+  height: 40px !important;
+}
+.desktop-only {
+  display: block;
+  width: fit-content;
+}
+/* Tablet Responsive Styles */
+@media screen and (max-width: 1024px) {
+  .workflow-sidebar {
+    width: 200px;
+    padding: 15px;
+  }
+
+  .workflow-meta-display {
+    left: 220px;
+  }
+}
+
+/* Mobile Responsive Styles */
+@media screen and (max-width: 768px) {
+    .desktop-only {
+    display: none !important;
+  }
+  .workflow-editor-container {
+    flex-direction: column;
+  }
+  .sidebar-controls{
+    position: unset !important;
+    justify-content: flex-end;
+    padding: 0 10px;
+    width: 100%;
+  }
+  .workflow-sidebar {
+    width: 100%;
+    height: auto;
+    border-right: none;
+    border-bottom: 1px solid #e2e8f0;
+    padding: 0;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  .sidebar-title,
+  .node-types-title {
+    display: none;
+  }
+
+
+.flowchart-header{
+  margin-top: 10px;
+}
+  .node-type-item {
+    margin: 0;
+    padding: 8px 10px;
+    border-radius: 16px;
+  }
+
+  .sidebar-button {
+    margin: 0;
+    padding: 10px 14px;
+    font-size: 16px;
+    border-radius: 20px;
+  }
+
+  .sidebar-button-icon {
+    margin-right: 4px;
+  }
+
+  .workflow-editor-area {
+    height: calc(100vh - 120px);
+  }
+
+  .desktop-only {
+    display: none;
+  }
+  .node-type-item span{
+    font-size: 20px !important;
+  }
+  .node-type-shape{
+    width: 30px;
+    height: 30px;
+    margin-left: 5px;
+  }
+
+    .node-types-container {
+      display: flex;
+    /* flex-wrap: wrap; */
+    flex-direction: row !important;
+    justify-content: center !important;
+    align-items: center;
+    gap: 0 20px;
+    padding: 0;
+    width: 100%;
+    margin-bottom: 10px;
+    padding-top: 10px !important;
+    border:0 !important;
+    border-top:1px solid #cbd5e1 !important;
+    border-radius: 0;
+    /* margin-right: 10px; */
+  }
+    .modal-content{
+    width: 100% !important;
+  }
+
+}
+/* Small Mobile Responsive Styles */
+@media screen and (max-width: 480px) {
+  .workflow-sidebar {
+    padding: 6px;
+  }
+
+  /* .workflow-editor-area {
+    padding-top: 50px;
+  } */
+
+
+
+
+  .node-type-item {
+    min-width: unset;
+    width: fit-content;
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 0 10px;
+    padding: 6px 8px;
+    border-radius: 12px;
+    font-size: 15px;
+  }
+
+  .workflow-meta-display {
+    font-size: 11px;
+    padding: 4px 8px;
+    top: 60px;
+  }
+
+  .sidebar-button {
+    font-size: 15px;
+    padding: 8px 10px;
+    border-radius: 16px;
+  }
+
+  .control-button {
+    width: 30px;
+    height: 30px;
+    padding: 8px;
+  }
+
+  .control-button svg {
+    width: 15px;
+    height: 15px;
+  }
+}
+
+/* Touch Device Optimizations */
+

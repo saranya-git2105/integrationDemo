@@ -24,7 +24,6 @@ import "reactflow/dist/style.css";
 import Modal from "react-modal";
 import CustomNode from "./CustomNode";
 import CustomSmoothEdge from "./CustomSmoothEdge";
-//import CustomEdge from './CustomEdge';
 import { generate_styled_edges, layoutTopDownCustom } from "../utils/layout";
 import Select from "react-select";
 import {
@@ -38,6 +37,8 @@ import {
   FiRefreshCw,
   FiGrid,
 } from "react-icons/fi";
+
+import "./WorkflowEditor.css";
 
 Modal.setAppElement(document.querySelector(".container"));
 const nodeWidth = 150;
@@ -864,9 +865,9 @@ const WorkflowEditor = forwardRef(
               actionId
             });
 
-            const sourceHandle = transition.FromHandleId || transition.sourceHandle || 
+            const sourceHandle = transition.FromHandleId || transition.sourceHandle ||
               (sourceNode.data.nodeShape === "Start" ? "Start-right-source" : "Step-right-source");
-            const targetHandle = transition.ToHandleId || transition.targetHandle || 
+            const targetHandle = transition.ToHandleId || transition.targetHandle ||
               (targetNode.data.nodeShape === "Stop" ? "Stop-left-target" : "Step-left-target");
 
             newEdges.push({
@@ -1312,6 +1313,25 @@ const WorkflowEditor = forwardRef(
             : n
         )
       );
+      setEdges((eds) => {
+        const outgoing = eds.filter((e) => e.source === selectedNode.id);
+        const updated = eds.map((e) => {
+          if (e.source === selectedNode.id) {
+            const actionIndex = outgoing.findIndex((x) => x.id === e.id);
+            const newLabel = nodeProperties.stepActions?.[actionIndex] || e.label;
+            return {
+              ...e,
+              label: newLabel,
+              data: {
+                ...e.data,
+                actionName: newLabel,
+              },
+            };
+          }
+          return e;
+        });
+        return updated;
+      });
       setSelectedNode(null);
       setModalIsOpen(false);
     };
@@ -1393,7 +1413,7 @@ const WorkflowEditor = forwardRef(
       return nodes.map((n) => ({ ...n, draggable: !isLocked }));
     }, [nodes, isLocked]);
 
-    // Consistent styles for all modals
+    // Remove the modalStyles object since we're using CSS classes now
     const modalStyles = {
       header: {
         textAlign: "center",
@@ -1425,157 +1445,46 @@ const WorkflowEditor = forwardRef(
     }, [nodes]);
 
     return (
-      <div
-        style={{
-          paddingTop: "0px",
-          height: "100vh",
-          width: "100%",
-          display: "flex",
-          background: "#e2e8f0",
-        }}
-      >
+      <div className="workflow-editor-container">
         {/* Sidebar Menu */}
-        <div
-          style={{
-            width: "220px",
-            background: "#e2e8f0",
-            color: "#1e293b",
-            padding: "18px",
-            display: "flex",
-            flexDirection: "column",
-            gap: "12px",
-            boxShadow: "2px 0 8px rgba(0, 0, 0, 0.05)",
-            fontFamily: "Inter, sans-serif",
-            overflowY: "auto",
-            flexShrink: 0, // Prevent it from shrinking
-            position: "relative",
-          }}
-        >
-          <h4
-            style={{
-              margin: "0 0 12px",
-              textAlign: "center",
-              color: "#0284c7",
-              fontSize: "16px",
-              fontWeight: "600",
-            }}
-          >
-            ⚙️ Menu
-          </h4>
-          <div
-            style={{
-              position: "absolute",
-              top: 18,
-              right: 10,
-              display: "flex",
-              gap: "4px",
-            }}
-          >
-            {/* Undo Button */}
-            <div
-              style={{
-                background: "#e2e8f0",
-                borderRadius: "50%",
-                padding: "6px",
-                cursor: "pointer",
-              }}
-              onClick={handleUndo}
-              title="Undo (Ctrl+Z)"
-            >
-              <FiRotateCcw size={12} color="#1e293b" />
-            </div>
-            {/* Redo Button */}
-            <div
-              style={{
-                background: "#e2e8f0",
-                borderRadius: "50%",
-                padding: "6px",
-                cursor: "pointer",
-              }}
-              onClick={handleRedo}
-              title="Redo (Ctrl+Y)"
-            >
-              <FiRotateCw size={12} color="#1e293b" />
+        <div className="workflow-sidebar">
+          {/* Only show titles on desktop */}
+          <div class="flowchart-header">
+            <div className="desktop-only">
+              <h4 className="sidebar-title">⚙️ Menu</h4>
             </div>
 
-            {/* Refresh Button */}
-            <div
-              style={{
-                background: "#e2e8f0",
-                borderRadius: "50%",
-                padding: "6px",
-                cursor: "pointer",
-              }}
-              onClick={() => window.location.reload()}
-              title="Refresh Page"
-            >
-              <FiRefreshCw size={12} color="#1e293b" />
+            <div className="sidebar-controls">
+              {/* Undo Button */}
+              <div className="control-button" onClick={handleUndo} title="Undo (Ctrl+Z)">
+                <FiRotateCcw size={12} color="#1e293b" />
+              </div>
+              {/* Redo Button */}
+              <div className="control-button" onClick={handleRedo} title="Redo (Ctrl+Y)">
+                <FiRotateCw size={12} color="#1e293b" />
+              </div>
             </div>
           </div>
-          {/* File Upload 
-        <input
-          type="file"
-          accept="application/json"
-          onChange={handleFileUpload}
-          style={{
-            fontSize: "12px",
-            padding: "5px",
-            background: "#ffffff",
-            color: "#0f172a",
-            border: "1px solid #cbd5e1",
-            borderRadius: "6px",
-            cursor: "pointer",
-          }}
-        />*/}
 
           {/* Node Types */}
-
-          <div
-            style={{
-              background: "#ffffff",
-              padding: "10px",
-              borderRadius: "10px",
-              border: "1px solid #cbd5e1",
-            }}
-          >
-            <p
-              style={{
-                fontWeight: "bold",
-                margin: "5px 0",
-                color: "#0ea5e9",
-                fontSize: "12px",
-              }}
-            >
-              🧱 Node Types
-            </p>
+          <div className="node-types-container">
+            <div className="desktop-only">
+              <p className="node-types-title">🧱 Node Types</p>
+            </div>
             {sidebarNodeTypes.map(({ label, color, shape }) => (
               <div
                 key={label}
+                className="node-type-item"
                 draggable
                 onDragStart={(e) => {
                   e.stopPropagation();
                   onDragStart(e, label);
                 }}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  marginBottom: "14px",
-                  cursor: "grab",
-                  userSelect: "none",
-                  WebkitUserSelect: "none",
-                }}
               >
                 <span style={{ fontSize: "13px" }}>{label}</span>
                 <div
-                  style={{
-                    width: shape === "diamond" ? 20 : 20,
-                    height: shape === "diamond" ? 20 : 20,
-                    background: color,
-                    ...(shape === "circle" && { borderRadius: "50%" }),
-                    ...(shape === "diamond" && { transform: "rotate(45deg)" }),
-                    marginLeft: "10px",
-                  }}
+                  className={`node-type-shape ${shape === "circle" ? "circle" : shape === "diamond" ? "diamond" : ""}`}
+                  style={{ background: color }}
                 />
               </div>
             ))}
@@ -1586,65 +1495,20 @@ const WorkflowEditor = forwardRef(
             <button
               key={label}
               onClick={action}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "flex-start",
-                gap: "12px",
-                backgroundColor: color,
-                color: "#ffffff",
-                fontSize: "14px",
-                padding: "8px 12px",
-                marginTop: "5px",
-                border: "none",
-                borderRadius: "6px",
-                cursor: "pointer",
-                transition: "0.2s",
-                boxShadow: "0 1px 4px rgba(0,0,0,0.1)",
-                lineHeight: "1",
-              }}
+              className="sidebar-button"
+              style={{ backgroundColor: color, color: "#ffffff" }}
             >
-              <span
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  marginLeft: "35px",
-                }}
-              >
-                {icon}
-              </span>
-              <span style={{ fontWeight: 500 }}>{label}</span>
+              <span className="sidebar-button-icon">{icon}</span>
+              <span className="sidebar-button-text">{label}</span>
             </button>
           ))}
         </div>
 
         {/* Workflow Editor */}
-        <div
-          style={{
-            paddingTop: 0,
-            flexGrow: 1,
-            height: "100vh",
-            position: "relative",
-            overflow: "hidden",
-          }}
-        >
+        <div className="workflow-editor-area">
           {loadedWorkflowMeta && (
-            <div
-              style={{
-                position: "absolute",
-                top: 10,
-                left: 240,
-                padding: "8px 16px",
-                background: "#0284c7",
-                color: "#fff",
-                borderRadius: "8px",
-                zIndex: 20,
-                fontSize: "14px",
-                fontWeight: "bold",
-              }}
-            >
-              📄 Workflow -- {loadedWorkflowMeta.name} -{" "}
-              {loadedWorkflowMeta.description}
+            <div className="workflow-meta-display">
+              📄 Workflow -- {loadedWorkflowMeta.name} - {loadedWorkflowMeta.description}
             </div>
           )}
           <ReactFlow
@@ -1676,6 +1540,7 @@ const WorkflowEditor = forwardRef(
             onNodesChange={isLocked ? undefined : onNodesChange}
             onEdgesChange={isLocked ? undefined : onEdgesChange}
             onNodeClick={isLocked ? undefined : handleNodeClick}
+
             onSelectionChange={(e) => {
               const selected = [...(e?.nodes || []), ...(e?.edges || [])];
 
@@ -1745,11 +1610,39 @@ const WorkflowEditor = forwardRef(
             defaultViewport={{ x: 0, y: 0, zoom: 1 }}
             style={{ background: "#F5F5F5" }}
           >
+
+            <MiniMap
+              nodeColor={(node) => {
+                switch (node.data?.nodeShape) {
+                  case "Start":
+                    return "#9fda7c";
+                  case "Stop":
+                    return "#FFB7B4";
+                  case "Step":
+                    return "#82d6f7";
+                  case "Decision":
+                    return "#B388EB";
+                  default:
+                    return "#82d6f7";
+                }
+              }}
+              nodeStrokeWidth={2}
+              nodeBorderRadius={3}
+              maskColor="rgba(255,255,255,0.6)"
+              style={{
+                height: 107,
+                width: 200,
+                border: "1px solid #ccc",
+                bottom: 10,
+                right: 30,
+                zIndex: 20,
+              }}
+            />
             <Controls
               position="top-right"
               showInteractive={false}
               style={{
-                zIndex: 10,
+                zIndex: 10, // Make sure it shows above everything
                 marginRight: 10,
                 marginTop: 469,
               }}
@@ -1780,52 +1673,11 @@ const WorkflowEditor = forwardRef(
               />
             )}
             {selectedElements.length > 1 && (
-              <div
-                style={{
-                  position: "absolute",
-                  top: 10,
-                  left: "50%",
-                  transform: "translateX(-50%)",
-                  background: "#0f172a",
-                  color: "#fff",
-                  padding: "6px 12px",
-                  borderRadius: "6px",
-                  fontSize: "14px",
-                  zIndex: 50,
-                  boxShadow: "0 2px 6px rgba(0,0,0,0.3)",
-                }}
-              >
+              <div className="selection-indicator">
                 🔗 {selectedElements.length} nodes selected
               </div>
             )}
           </ReactFlow>
-          <MiniMap
-            nodeColor={(node) => {
-              switch (node.data?.nodeShape) {
-                case "Start":
-                  return "#9fda7c";
-                case "Stop":
-                  return "#FFB7B4";
-                case "Step":
-                  return "#82d6f7";
-                case "Decision":
-                  return "#B388EB";
-                default:
-                  return "#82d6f7";
-              }
-            }}
-            nodeStrokeWidth={2}
-            nodeBorderRadius={3}
-            maskColor="rgba(255,255,255,0.6)"
-            style={{
-              height: 107,
-              width: 200,
-              border: "1px solid #ccc",
-              bottom: 10,
-              right: 30,
-              zIndex: 20,
-            }}
-          />
           <EdgeLabelRenderer>
             {edges
               .filter(
@@ -1843,24 +1695,14 @@ const WorkflowEditor = forwardRef(
                 const edgeCenterX =
                   (sourceNode.position.x + targetNode.position.x) / 2 + 75;
                 const edgeCenterY =
-                  (sourceNode.position.y + targetNode.position.y) / 2 + 10; // Changed from 30 to 10 to move up
+                  (sourceNode.position.y + targetNode.position.y) / 2 + 10;
 
                 return (
                   <div
                     key={`tooltip-${edge.id}`}
+                    className="edge-tooltip"
                     style={{
-                      position: "absolute",
-                      transform: `translate(-50%, -100%) translate(${edgeCenterX}px, ${edgeCenterY}px)`, // Changed from -50% to -100% to position above
-                      background: "#fefce8",
-                      color: "black",
-                      padding: "6px 10px",
-                      borderRadius: "6px",
-                      fontSize: "12px",
-                      whiteSpace: "pre-line",
-                      maxWidth: "240px",
-                      zIndex: 999,
-                      pointerEvents: "none",
-                      boxShadow: "0 4px 10px rgba(0,0,0,0.3)",
+                      transform: `translate(-50%, -100%) translate(${edgeCenterX}px, ${edgeCenterY}px)`,
                     }}
                   >
                     {edge.label && (
@@ -1883,23 +1725,16 @@ const WorkflowEditor = forwardRef(
               })}
           </EdgeLabelRenderer>
         </div>
+
+        {/* Context Menus */}
         {!isLocked && contextMenu && selectedEdge && (
           <div
             id="edge-context-menu"
+            className="context-menu"
             style={{
-              position: "absolute",
               top: edgeMenuPosition.y,
               left: edgeMenuPosition.x,
-              background: "white",
-              border: "1px solid black",
-              borderRadius: "10px",
-              boxShadow: "0 4px 10px rgba(0, 0, 0, 0.3)",
-              padding: "10px",
-              zIndex: 1000,
-              minWidth: "250px",
               cursor: isDraggingEdgeMenu ? "grabbing" : "grab",
-              borderRadius: "8px",
-              boxShadow: "0 4px 8px rgba(0,0,0,0.1)",
             }}
             onMouseDown={(e) => {
               setIsDraggingEdgeMenu(true);
@@ -1924,81 +1759,7 @@ const WorkflowEditor = forwardRef(
             }}
           >
             <div style={{ marginTop: "10px" }}>
-              {/* Short Purpose 
-              <label style={{ display: "block", marginBottom: "5px" }}>
-                Short Purpose for Forward:
-              </label>
-              <input
-                type="text"
-                name="shortPurposeForForward"
-                value={selectedEdge?.data?.shortPurposeForForward || ""}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  setEdges((prevEdges) =>
-                    prevEdges.map((edge) =>
-                      edge.id === selectedEdge.id
-                        ? {
-                            ...edge,
-                            data: {
-                              ...edge.data,
-                              shortPurposeForForward: value,
-                            },
-                          }
-                        : edge
-                    )
-                  );
-                  setSelectedEdge((prev) => ({
-                    ...prev,
-                    data: {
-                      ...prev.data,
-                      shortPurposeForForward: value,
-                    },
-                  }));
-                }}
-                style={{
-                  padding: "8px",
-                  borderRadius: "6px",
-                  border: "1px solid #ccc",
-                  marginBottom: "10px",
-                  width: "90%",
-                }}
-              />*/}
 
-              {/* Purpose 
-              <label style={{ display: "block", marginBottom: "5px" }}>
-                Purpose for Forward:
-              </label>
-              <textarea
-                name="purposeForForward"
-                rows={4}
-                value={(() => {
-                  const edge = edges.find((e) => e.id === selectedEdge?.id);
-                  return edge?.data?.purposeForForward || "";
-                })()}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  setEdges((prevEdges) =>
-                    prevEdges.map((edge) =>
-                      edge.id === selectedEdge.id
-                        ? {
-                            ...edge,
-                            data: {
-                              ...edge.data,
-                              purposeForForward: value,
-                            },
-                          }
-                        : edge
-                    )
-                  );
-                }}
-                style={{
-                  padding: "6px",
-                  borderRadius: "5px",
-                  border: "1px solid #ccc",
-                  resize: "vertical",
-                  width: "90%",
-                }}
-              />*/}
               <label
                 style={{
                   marginTop: "15px",
@@ -2009,10 +1770,19 @@ const WorkflowEditor = forwardRef(
                 Select Edge Action:
               </label>
               <Select
-                options={stepActionsOptions.map((action) => ({
-                  label: action.ActionName,
-                  value: action.ActionName,
-                }))}
+                options={
+                  (() => {
+                    const sourceNode = nodes.find((n) => n.id === selectedEdge.source);
+                    const selectedActionNames = sourceNode?.data?.properties?.StepActions || [];
+                    
+                    return stepActionsOptions
+                      .filter((action) => selectedActionNames.includes(action.ActionName))
+                      .map((action) => ({
+                        label: action.ActionName,
+                        value: action.ActionName,
+                      }));
+                  })()
+                }
                 value={{ label: selectedEdge.label, value: selectedEdge.label }}
                 onChange={(selected) => updateEdgeLabel(selected.value)}
               />
@@ -2037,18 +1807,11 @@ const WorkflowEditor = forwardRef(
         {!isLocked && nodeContextMenu && (
           <div
             data-node-context-menu
+            className="context-menu"
             style={{
-              position: "absolute",
               top: nodeMenuPosition.y,
               left: nodeMenuPosition.x,
-              background: "white",
-              border: "1px solid black",
-              padding: "10px",
-              zIndex: 1000,
-              minWidth: "140px",
               cursor: isDraggingNodeMenu ? "grabbing" : "grab",
-              borderRadius: "8px",
-              boxShadow: "0 4px 8px rgba(0,0,0,0.1)",
             }}
             onMouseDown={(e) => {
               setIsDraggingNodeMenu(true);
@@ -2089,27 +1852,7 @@ const WorkflowEditor = forwardRef(
             >
               🗑 Delete Node
             </p>
-            <p
-              onClick={() => {
-                const newLabel = prompt(
-                  "Rename node:",
-                  nodeContextMenu.node.data.label
-                );
-                if (newLabel) {
-                  setNodes((nds) =>
-                    nds.map((n) =>
-                      n.id === nodeContextMenu.node.id
-                        ? { ...n, data: { ...n.data, label: newLabel } }
-                        : n
-                    )
-                  );
-                }
-                setNodeContextMenu(null);
-              }}
-              style={{ cursor: "pointer", marginBottom: "5px" }}
-            >
-              ✏️ Rename Node
-            </p>
+
             <p
               onClick={() => {
                 const newNodeId = `${nodes.length + 1}`;
@@ -2179,563 +1922,108 @@ const WorkflowEditor = forwardRef(
           </div>
         )}
 
-        {/* Node Properties Modal */}
+        {/* Modal for Node Properties */}
         <Modal
           isOpen={modalIsOpen}
           onRequestClose={() => setModalIsOpen(false)}
           parentSelector={() => document.querySelector(".container")}
-          style={{
-            content: {
-              width: "30%",
-              minHeight: "400px",
-              maxHeight: "80vh",
-              margin: "auto",
-              padding: "15px",
-              borderRadius: "10px",
-              boxShadow: "0 4px 10px rgba(0, 0, 0, 0.3)",
-              overflow: "hidden",
-              display: "flex",
-              flexDirection: "column",
-            },
-            overlay: {
-              backgroundColor: "rgba(0, 0, 0, 0.5)",
-            },
-          }}
+          className="modal-content"
         >
-          <h2 style={modalStyles.header}>Node Properties</h2>
+          <h2 className="modal-header">Node Properties</h2>
 
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: "12px",
-              overflowY: "auto",
-              paddingRight: "10px",
-              flex: 1,
-            }}
-          >
+          <div className="modal-content-container">
             {/* Description Field */}
-            <label style={modalStyles.label}>Step Name :</label>
-            <input
-              type="text"
-              name="stepName"
-              value={nodeProperties.stepName || ""}
-              onChange={updateNodeProperties}
-              style={{ ...modalStyles.input, width: "95%" }}
-            />
-
-            {/* Step Actions Multi-Select */}
-            <label style={modalStyles.label}>Step Actions:</label>
-            <Select
-              isMulti
-              closeMenuOnSelect={false}
-              hideSelectedOptions={false}
-              options={stepActionsOptions.map((action) => ({
-                label: action.ActionName,
-                value: action.ActionName,
-              }))}
-              value={
-                nodeProperties.stepActions?.map((actionName) => ({
-                  label: actionName,
-                  value: actionName,
-                })) || []
-              }
-              onChange={(selected) =>
-                setNodeProperties((prev) => ({
-                  ...prev,
-                  stepActions: selected
-                    ? selected.map((item) => item.value)
-                    : [],
-                }))
-              }
-              styles={{
-                control: (base) => ({
-                  ...base,
-                  fontSize: "14px",
-                }),
-                option: (base, state) => ({
-                  ...base,
-                  fontSize: "14px",
-                  backgroundColor: state.isSelected ? "#e2e8f0" : "white",
-                  color: "black",
-                  "&:hover": {
-                    backgroundColor: "#f1f5f9",
-                  },
-                }),
-                multiValue: (base) => ({
-                  ...base,
-                  backgroundColor: "#e2e8f0",
-                  borderRadius: "4px",
-                  margin: "2px",
-                }),
-                multiValueLabel: (base) => ({
-                  ...base,
-                  color: "black",
-                  padding: "4px 8px",
-                }),
-              }}
-              components={{
-                Option: ({ children, ...props }) => (
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      padding: "8px",
-                      cursor: "pointer",
-                    }}
-                    onClick={() => props.selectOption(props.data)}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={props.isSelected}
-                      onChange={() => { }}
-                      style={{ marginRight: "8px" }}
-                    />
-                    {children}
-                  </div>
-                ),
-              }}
-            />
-
-            {/* Users Multi-Select */}
-            <label style={modalStyles.label}>Users:</label>
-            <Select
-              isMulti
-              closeMenuOnSelect={false}
-              hideSelectedOptions={false}
-              options={stepUsersOptions.map((user) => ({
-                label: user.UserName,
-                value: user.UserName,
-              }))}
-              value={
-                nodeProperties.UserNames?.map((userName) => ({
-                  label: userName,
-                  value: userName,
-                })) || []
-              }
-              onChange={(selected) =>
-                setNodeProperties((prev) => ({
-                  ...prev,
-                  UserNames: selected
-                    ? selected.map((item) => item.value)
-                    : [],
-                }))
-              }
-              styles={{
-                control: (base) => ({
-                  ...base,
-                  fontSize: "14px",
-                }),
-                option: (base, state) => ({
-                  ...base,
-                  fontSize: "14px",
-                  backgroundColor: state.isSelected ? "#e2e8f0" : "white",
-                  color: "black",
-                  "&:hover": {
-                    backgroundColor: "#f1f5f9",
-                  },
-                }),
-                multiValue: (base) => ({
-                  ...base,
-                  backgroundColor: "#e2e8f0",
-                  borderRadius: "4px",
-                  margin: "2px",
-                }),
-                multiValueLabel: (base) => ({
-                  ...base,
-                  color: "black",
-                  padding: "4px 8px",
-                }),
-              }}
-            />
-
+            <div class="form-input-section">
+              <label className="modal-label">Step Name :</label>
+              <input
+                type="text"
+                name="stepName"
+                value={nodeProperties.stepName || ""}
+                onChange={updateNodeProperties}
+                className="modal-input common-form-field-height"
+              />
+            </div>
+            <div class="form-input-section">
+              {/* Step Actions Multi-Select */}
+              <label className="modal-label">Step Actions:</label>
+              <Select
+                isMulti
+                closeMenuOnSelect={false}
+                hideSelectedOptions={false}
+                options={stepActionsOptions.map((action) => ({
+                  label: action.ActionName,
+                  value: action.ActionName,
+                }))}
+                value={
+                  nodeProperties.stepActions?.map((actionName) => ({
+                    label: actionName,
+                    value: actionName,
+                  })) || []
+                }
+                onChange={(selected) =>
+                  setNodeProperties((prev) => ({
+                    ...prev,
+                    stepActions: selected
+                      ? selected.map((item) => item.value)
+                      : [],
+                  }))
+                }
+                className="modal-select common-form-field-height"
+                classNamePrefix="modal-select"
+              />
+            </div>
+            <div class="form-input-section">
+              {/* Users Multi-Select */}
+              <label className="modal-label">Users:</label>
+              <Select
+                isMulti
+                closeMenuOnSelect={false}
+                hideSelectedOptions={false}
+                options={stepUsersOptions.map((user) => ({
+                  label: user.UserName,
+                  value: user.UserName,
+                }))}
+                value={
+                  nodeProperties.UserNames?.map((userName) => ({
+                    label: userName,
+                    value: userName,
+                  })) || []
+                }
+                onChange={(selected) =>
+                  setNodeProperties((prev) => ({
+                    ...prev,
+                    UserNames: selected
+                      ? selected.map((item) => item.value)
+                      : [],
+                  }))
+                }
+                className="modal-select common-form-field-height"
+                classNamePrefix="modal-select"
+              />
+            </div>
             {/* Buttons */}
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-evenly",
-                marginTop: "20px",
-              }}
-            >
-              <button
-                onClick={saveNodeProperties}
-                style={{
-                  ...modalButtonStyle,
-                  background: "#3498db",
-                  color: "white",
-                }}
-              >
-                Save
-              </button>
+            <div className="modal-buttons-container">
               <button
                 onClick={() => setModalIsOpen(false)}
-                style={{
-                  ...modalButtonStyle,
-                  background: "#e74c3c",
-                  color: "white",
-                }}
+                className="modal-button modal-button-cancel common-form-field-height"
               >
                 Cancel
               </button>
+              <button
+                onClick={saveNodeProperties}
+                className="modal-button modal-button-save common-form-field-height"
+              >
+                Save
+              </button>
+
             </div>
           </div>
         </Modal>
 
-        {/* JSON View Modal */}
-        <Modal
-          isOpen={modalIsOpen1}
-          onRequestClose={() => setModalIsOpen1(false)}
-          parentSelector={() => document.querySelector(".container")}
-          style={{
-            content: {
-              width: "50%",
-              margin: "auto",
-              padding: "15px",
-              borderRadius: "10px",
-              boxShadow: "0 4px 10px rgba(0, 0, 0, 0.3)",
-              minHeight: "400px",
-              maxHeight: "80vh",
-              overflow: "hidden",
-              display: "flex",
-              flexDirection: "column",
-            },
-            overlay: {
-              backgroundColor: "rgba(0, 0, 0, 0.5)",
-            },
-          }}
-        >
-          <h2 style={modalStyles.header}>Workflow JSON</h2>
-          <div style={{ overflowY: "auto", flex: 1 }}>
-            <pre style={{ ...modalStyles.content, whiteSpace: "pre-wrap" }}>
-              {jsonData}
-            </pre>
-          </div>
-          <div style={{ marginTop: "20px", textAlign: "center" }}>
-            <button
-              onClick={() => setModalIsOpen1(false)}
-              style={{
-                ...modalButtonStyle,
-                background: "#e74c3c",
-                color: "white",
-              }}
-            >
-              Close
-            </button>
-          </div>
-        </Modal>
-        {lockedToast && (
-          <div
-            style={{
-              position: "absolute",
-              top: 70,
-              right: 20,
-              backgroundColor: "#f87171",
-              color: "#fff",
-              padding: "10px 16px",
-              borderRadius: "8px",
-              fontSize: "14px",
-              boxShadow: "0 4px 10px rgba(0,0,0,0.15)",
-              zIndex: 30,
-              animation: "fadeInOut 2s ease",
-            }}
-          >
-            🚫 Workflow is locked
-          </div>
-        )}
-        {/* Workflow naming Modal */}
-        <Modal
-          isOpen={metaModalOpen}
-          onRequestClose={() => setMetaModalOpen(false)}
-          parentSelector={() => document.querySelector(".container")}
-          style={{
-            content: {
-              width: "30%",
-              minHeight: "400px",
-              maxHeight: "80vh",
-              margin: "auto",
-              padding: "20px",
-              borderRadius: "10px",
-              boxShadow: "0 4px 10px rgba(0, 0, 0, 0.3)",
-              overflow: "hidden",
-              display: "flex",
-              flexDirection: "column",
-            },
-            overlay: {
-              backgroundColor: "rgba(0, 0, 0, 0.5)",
-            },
-          }}
-        >
-          <h3 style={modalStyles.header}>Workflow Details</h3>
 
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: "15px",
-              overflowY: "auto",
-              flex: 1,
-              paddingRight: "10px",
-            }}
-          >
-            {pendingAction !== "create" && (
-              <>
-                <label style={modalStyles.label}>Select Workflow:</label>
-                <Select
-                  options={workflowOptions}
-                  value={selectedWorkflowOption}
-                  onChange={(selected) => {
-                    setSelectedWorkflowOption(selected);
-                    if (selected.value === "new") {
-                      setWorkflowMeta({
-                        name: "",
-                        description: "",
-                        dateEffective: new Date().toISOString(),
-                      });
-                    } else {
-                      setWorkflowMeta({
-                        name: selected.data.Name,
-                        description: selected.data.Description,
-                        dateEffective: new Date().toISOString(),
-                      });
-                    }
-                  }}
-                  styles={{
-                    control: (base) => ({
-                      ...base,
-                      fontSize: "14px",
-                    }),
-                    option: (base) => ({
-                      ...base,
-                      fontSize: "14px",
-                    }),
-                  }}
-                />
-              </>
-            )}
-
-            <label style={modalStyles.label}>Name:</label>
-            <input
-              type="text"
-              maxLength={64}
-              value={workflowMeta.name}
-              onChange={(e) =>
-                setWorkflowMeta({ ...workflowMeta, name: e.target.value })
-              }
-              style={modalStyles.input}
-            />
-
-            <label style={modalStyles.label}>Description:</label>
-            <textarea
-              maxLength={256}
-              value={workflowMeta.description}
-              onChange={(e) =>
-                setWorkflowMeta({
-                  ...workflowMeta,
-                  description: e.target.value,
-                })
-              }
-              style={{
-                ...modalStyles.input,
-                height: "60px",
-                resize: "vertical",
-              }}
-            />
-
-            <label style={modalStyles.label}>Effective Date:</label>
-            <input
-              type="datetime-local"
-              value={workflowMeta.dateEffective.slice(0, 16)}
-              onChange={(e) =>
-                setWorkflowMeta({
-                  ...workflowMeta,
-                  dateEffective: new Date(e.target.value).toISOString(),
-                })
-              }
-              style={modalStyles.input}
-            />
-          </div>
-
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-evenly",
-              marginTop: "20px",
-            }}
-          >
-            <button
-              onClick={handleMetaContinue}
-              style={{
-                ...modalButtonStyle,
-                background: "#10b981",
-                color: "white",
-              }}
-            >
-              Continue
-            </button>
-            <button
-              onClick={() => setMetaModalOpen(false)}
-              style={{
-                ...modalButtonStyle,
-                background: "#e74c3c",
-                color: "white",
-              }}
-            >
-              Cancel
-            </button>
-          </div>
-        </Modal>
-        {/* Modal for Loading the Workflow 
-        <Modal
-          isOpen={loadWorkflowModalOpen}
-          onRequestClose={() => setLoadWorkflowModalOpen(false)}
-          parentSelector={() => document.querySelector(".container")}
-          style={{
-            content: {
-              width: "30%",
-              minHeight: "200px",
-              maxHeight: "40vh",
-              margin: "auto",
-              padding: "20px",
-              borderRadius: "10px",
-              boxShadow: "0 4px 10px rgba(0, 0, 0, 0.3)",
-              overflow: "hidden",
-              display: "flex",
-              flexDirection: "column",
-            },
-            overlay: {
-              backgroundColor: "rgba(0, 0, 0, 0.5)",
-            },
-          }}
-        >
-          <h3 style={modalStyles.header}>Load Workflow</h3>
-
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: "15px",
-              overflowY: "auto",
-              flex: 1,
-              paddingRight: "10px",
-            }}
-          >
-            <label style={modalStyles.label}>Select Workflow:</label>
-            <Select
-              options={allWorkflows.map((wf) => ({
-                value: wf.Id,
-                label: `${wf.Name} - ${wf.Description}`,
-                data: wf,
-              }))}
-              value={selectedWorkflowToLoad}
-              onChange={(selected) => setSelectedWorkflowToLoad(selected)}
-              styles={{
-                control: (base) => ({
-                  ...base,
-                  fontSize: "14px",
-                }),
-                option: (base) => ({
-                  ...base,
-                  fontSize: "14px",
-                }),
-                menuPortal: (base) => ({ ...base, zIndex: 9999 }),
-              }}
-              menuPortalTarget={
-                typeof window !== "undefined" ? document.body : null
-              }
-              menuPosition="fixed"
-            />
-          </div>
-
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-evenly",
-              marginTop: "20px",
-            }}
-          >
-            <button
-              onClick={async () => {
-                if (!selectedWorkflowToLoad) return;
-                const workflowId = selectedWorkflowToLoad.value;
-                try {
-                  const response = await fetch(
-                    `${loadWorkflow}/${workflowId}`,
-                    {
-                      method: "GET",
-                      headers: {
-                        ...apiUrls?.headers, // ✅ Inject headers from Angular
-                      },
-                    }
-                  );
-                  const data = await response.json();
-                  console.log("responsedata", data);
-                  if (data?.Workflow?.Steps?.length > 0) {
-                    convertJsonToWorkflow(data);
-                    setWorkflowMeta({
-                      name: data.Workflow.Name || "",
-                      description: data.Workflow.Description || "",
-                      dateEffective:
-                        data.Workflow.DateEffective || new Date().toISOString(),
-                    });
-                    setSelectedWorkflowOption({
-                      label: `${data.Workflow.Name} - ${data.Workflow.Description}`,
-                      value: data.Workflow.Id,
-                      data: data.Workflow,
-                    });
-                    //alert("📥 Workflow loaded successfully!");
-                    setLoadWorkflowModalOpen(false);
-                  } else {
-                    alert("⚠️ No workflow data found.");
-                  }
-                } catch (error) {
-                  console.error("Error loading workflow:", error);
-                  alert("🚨 Error occurred while loading workflow.");
-                }
-              }}
-              style={{
-                ...modalButtonStyle,
-                background: "#10b981",
-                color: "white",
-              }}
-            >
-              Load
-            </button>
-            <button
-              onClick={() => setLoadWorkflowModalOpen(false)}
-              style={{
-                ...modalButtonStyle,
-                background: "#e74c3c",
-                color: "white",
-              }}
-            >
-              Cancel
-            </button>
-          </div>
-        </Modal>*/}
       </div>
     );
   }
 );
-const buttonStyle = {
-  background: "#f1f5f9",
-  border: "1px solid #cbd5e1",
-  borderRadius: "6px",
-  padding: "6px 8px",
-  cursor: "pointer",
-  fontSize: "14px",
-  transition: "transform 0.2s ease",
-};
-
-// Consistent style for all modal buttons
-const modalButtonStyle = {
-  height: "40px",
-  minWidth: "110px",
-  padding: "10px 15px",
-  fontSize: "14px",
-  fontWeight: "500",
-  border: "none",
-  borderRadius: "5px",
-  cursor: "pointer",
-};
 
 export default WorkflowEditor;
