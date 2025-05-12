@@ -958,8 +958,6 @@ const WorkflowEditor = forwardRef(
           id: `${startNodeId}-${firstNode.id}-StartEdge`,
           source: startNodeId,
           target: firstNode.id,
-          sourceHandle,
-          targetHandle,
           markerEnd: { type: MarkerType.ArrowClosed },
           animated: false,
           type: "customSmooth",
@@ -1774,9 +1772,15 @@ const WorkflowEditor = forwardRef(
                   (() => {
                     const sourceNode = nodes.find((n) => n.id === selectedEdge.source);
                     const selectedActionNames = sourceNode?.data?.properties?.StepActions || [];
+                    const usedActions = edges
+                      .filter(e => e.source === selectedEdge.source && e.id !== selectedEdge.id)
+                      .map(e => e.label);
                     
                     return stepActionsOptions
-                      .filter((action) => selectedActionNames.includes(action.ActionName))
+                      .filter((action) => 
+                        selectedActionNames.includes(action.ActionName) && 
+                        !usedActions.includes(action.ActionName)
+                      )
                       .map((action) => ({
                         label: action.ActionName,
                         value: action.ActionName,
