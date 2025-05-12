@@ -1931,7 +1931,7 @@ const WorkflowEditor = forwardRef(
           isOpen={modalIsOpen}
           onRequestClose={() => setModalIsOpen(false)}
           parentSelector={() => document.querySelector(".container")}
-          className="modal-content node-properties-modal"
+          className="modal-content"
         >
           <h2 className="modal-header">Node Properties</h2>
 
@@ -1974,6 +1974,39 @@ const WorkflowEditor = forwardRef(
                 }
                 className="modal-select common-form-field-height"
                 classNamePrefix="modal-select"
+                components={{
+                  Option: ({ children, ...props }) => {
+                    const { isSelected, isFocused, innerRef, innerProps } = props;
+                    return (
+                      <div
+                        ref={innerRef}
+                        {...innerProps}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          padding: '8px 12px',
+                          backgroundColor: isFocused ? '#f0f0f0' : 'white',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => null}
+                          style={{ marginRight: '8px' }}
+                        />
+                        <div>{children}</div>
+                      </div>
+                    );
+                  },
+                }}
+                styles={{
+                  option: (base) => ({
+                    ...base,
+                    padding: 0,
+                    cursor: 'pointer',
+                  }),
+                }}
               />
             </div>
             <div class="form-input-section">
