@@ -477,6 +477,16 @@ const WorkflowEditor = forwardRef(
       const reactFlowBounds = event.target.getBoundingClientRect();
       const nodeType = event.dataTransfer.getData("application/reactflow");
 
+      // Check if trying to add Start/Stop node when one already exists
+      if (nodeType === "Start" && nodes.some(n => n.data.nodeShape === "Start")) {
+        alert("⚠️ A Start node already exists in the workflow. Only one Start node is allowed.");
+        return;
+      }
+      if (nodeType === "Stop" && nodes.some(n => n.data.nodeShape === "Stop")) {
+        alert("⚠️ A Stop node already exists in the workflow. Only one Stop node is allowed.");
+        return;
+      }
+
       const rawPosition = {
         x: event.clientX - reactFlowBounds.left - nodeWidth / 2,
         y: event.clientY - reactFlowBounds.top - nodeHeight / 2,
@@ -549,115 +559,93 @@ const WorkflowEditor = forwardRef(
     const convertJsonToWorkflow = async (data) => {
       console.log("📥 Incoming JSON Data:", JSON.stringify(data, null, 2));
       let actions = stepActionsOptions;
-
       let users = stepUsersOptions;
 
+      // Validate Start/Stop nodes in incoming data
+      const workflowSteps = data?.WorkFlowSteps || [];
+      const startNodes = workflowSteps.filter(step => 
+        step.StepName?.toLowerCase() === "start" || 
+        step.Properties?.NodeShape === "Start"
+      );
+      const stopNodes = workflowSteps.filter(step => 
+        step.StepName?.toLowerCase() === "stop" || 
+        step.StepName?.toLowerCase() === "completed" ||
+        step.Properties?.NodeShape === "Stop"
+      );
 
-
-      if (!actions.length) {
-
-        console.log("⏳ Loading actions...");
-
-        try {
-
-          const actionsData = await Promise.resolve(getActions());
-
-          console.log("📥 Raw Actions Response:", actionsData);
-
-
-
-          if (actionsData?.ReturnCode === 0 && Array.isArray(actionsData.Data)) {
-
-            actions = actionsData.Data.map((action) => ({
-
-              ActionId: action.Id,
-
-              ActionName: action.Name,
-
-              ActionCode: action.Code,
-
-            }));
-
-            console.log("📋 Formatted Actions:", actions);
-
-            setStepActionsOptions(actions);
-
-          } else {
-
-            console.warn("⚠️ Invalid actions data format:", actionsData);
-
-            return;
-
-          }
-
-        } catch (err) {
-
-          console.error("❌ Failed to load actions:", err);
-
-          return;
-
-        }
-
+      if (startNodes.length > 1) {
+        console.warn("⚠️ Multiple Start nodes found in workflow data. Using only the first one.");
+        // Keep only the first Start node
+        const firstStartIndex = workflowSteps.findIndex(step => 
+          step.StepName?.toLowerCase() === "start" || 
+          step.Properties?.NodeShape === "Start"
+        );
+        workflowSteps.splice(firstStartIndex + 1, startNodes.length - 1);
       }
 
+      if (stopNodes.length > 1) {
+        console.warn("⚠️ Multiple Stop nodes found in workflow data. Using only the first one.");
+        // Keep only the first Stop node
+        const firstStopIndex = workflowSteps.findIndex(step => 
+          step.StepName?.toLowerCase() === "stop" || 
+          step.StepName?.toLowerCase() === "completed" ||
+          step.Properties?.NodeShape === "Stop"
+        );
+        workflowSteps.splice(firstStopIndex + 1, stopNodes.length - 1);
+      }
 
+      if (!actions.length) {
+        console.log("⏳ Loading actions...");
+        try {
+          const actionsData = await Promise.resolve(getActions());
+          console.log("📥 Raw Actions Response:", actionsData);
+
+          if (actionsData?.ReturnCode === 0 && Array.isArray(actionsData.Data)) {
+            actions = actionsData.Data.map((action) => ({
+              ActionId: action.Id,
+              ActionName: action.Name,
+              ActionCode: action.Code,
+            }));
+            console.log("📋 Formatted Actions:", actions);
+            setStepActionsOptions(actions);
+          } else {
+            console.warn("⚠️ Invalid actions data format:", actionsData);
+            return;
+          }
+        } catch (err) {
+          console.error("❌ Failed to load actions:", err);
+          return;
+        }
+      }
 
       if (!users.length) {
-
         console.log("⏳ Loading users...");
-
         try {
-
           const usersData = await Promise.resolve(getUsers());
-
           console.log("📥 Raw Users Response:", usersData);
 
-
-
           if (usersData?.ReturnCode === 0 && Array.isArray(usersData.Data)) {
-
             users = usersData.Data.map((user) => ({
-
               UserId: user.Id,
-
               UserName: user.Name,
-
             }));
-
             console.log("📋 Formatted Users:", users);
-
             setStepUsersOptions(users);
-
           } else {
-
             console.warn("⚠️ Invalid users data format:", usersData);
-
             return;
-
           }
-
         } catch (err) {
-
           console.error("❌ Failed to load users:", err);
-
           return;
-
         }
-
       }
 
       // Verify both actions and users are loaded
-
       if (!actions.length || !users.length) {
-
         console.error("❌ Actions or users not loaded, cannot proceed with workflow conversion");
-
         return;
-
       }
-
-      const workflowSteps = data?.WorkFlowSteps || [];
-      console.log("📋 Workflow Steps:", JSON.stringify(workflowSteps, null, 2));
 
       if (!workflowSteps.length) {
         console.warn("⚠️ No workflow steps found in the data");
@@ -667,96 +655,54 @@ const WorkflowEditor = forwardRef(
       // Helper function to get action name from ID
       const getActionNameFromId = (actionId) => {
         if (!actionId) {
-
           console.warn("⚠️ No action ID provided");
-
           return "";
-
         }
-
-
 
         console.log("🔍 Looking up action:", {
-
           actionId,
-
           availableActions: actions,
-
           actionCount: actions.length
-
         });
 
-
-
         const foundAction = actions.find(a => a.ActionId === actionId);
-
         if (foundAction) {
-
           console.log("✅ Found action:", foundAction);
-
           return foundAction.ActionName;
-
         }
-
-
 
         // Try to find by ActionCode if ActionId doesn't match
-
         const foundByCode = actions.find(a => a.ActionCode === actionId);
-
         if (foundByCode) {
-
           console.log("✅ Found action by code:", foundByCode);
-
           return foundByCode.ActionName;
-
         }
 
-
-
         console.warn("⚠️ Action not found:", actionId);
-
         return actionId;
       };
 
       // Helper function to get user name from ID
       const getUserNameFromId = (userId) => {
-
         if (!userId) {
-
           console.warn("⚠️ No user ID provided");
-
           return "";
-
         }
-
-
 
         console.log("🔍 Looking up user:", {
-
           userId,
-
           availableUsers: users,
-
           userCount: users.length
-
         });
 
-
-
         const foundUser = users.find(u => u.UserId === userId);
-
         if (foundUser) {
-
           console.log("✅ Found user:", foundUser);
-
           return foundUser.UserName;
-
         }
+
         console.warn("⚠️ User not found:", userId);
-
         return userId;
-
       };
 
       const stepCodeToIdMap = {};
