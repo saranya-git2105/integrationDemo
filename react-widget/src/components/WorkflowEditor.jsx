@@ -1016,31 +1016,9 @@ const WorkflowEditor = forwardRef(
       const nodesCopy = [...getNodes()];
       const edgesCopy = [...getEdges()];
 
-      // Get the original workflow JSON from localStorage
-      const originalWorkflowJson = localStorage.getItem('ModifyWorkflowJson');
-      const originalWorkflow = originalWorkflowJson ? JSON.parse(originalWorkflowJson) : null;
-
-      // Create a map of step codes to their original IDs
-      const stepCodeToOriginalId = new Map();
-      if (originalWorkflow?.WorkFlowSteps) {
-        originalWorkflow.WorkFlowSteps.forEach(step => {
-          stepCodeToOriginalId.set(step.StepCode, {
-            stepId: step.Id,
-            actionIds: step.WorkFlowStepAction?.map(action => ({
-              actionName: action.ActionId,
-              id: action.Id
-            })) || [],
-            userIds: step.WorkFlowStepUser?.map(user => ({
-              userId: user.UserId,
-              id: user.Id
-            })) || [],
-            transitionIds: step.WorkFlowStepTransition?.map(transition => ({
-              nextStepCode: transition.NextStepCode,
-              id: transition.Id
-            })) || []
-          });
-        });
-      }
+      // Get the original workflow data from localStorage if it exists
+      const originalWorkflow = JSON.parse(localStorage.getItem("workflowJson") || "{}");
+      const originalSteps = originalWorkflow.WorkFlowSteps || [];
 
       const graph = {};
       const visited = new Set();
@@ -1126,24 +1104,31 @@ const WorkflowEditor = forwardRef(
 
       dfs(startNode.id);
 
-      // Optional: include disconnected nodes too (if desired)
+      // Include disconnected nodes
       nodesCopy.forEach((node) => {
         if (!visited.has(node.id)) dfs(node.id);
       });
 
       // Build JSON
       const jsonOutput = {
-        Id: originalWorkflow?.Id || workflowForm?.Id || "",
-        WorkFlowName: workflowForm?.WorkFlowName || "Untitled Workflow",
-        ModuleId: workflowForm?.ModuleId || "",
-        ProjectId: workflowForm?.ProjectId || "",
-        RDLCTypeId: workflowForm?.RDLCTypeId || "",
-        DateEffective: workflowForm?.DateEffective || new Date().toISOString(),
+        Id: originalWorkflow.Id || workflowForm?.Id || "",
+        WorkFlowName: workflowForm?.WorkFlowName || originalWorkflow.WorkFlowName || "Untitled Workflow",
+        ModuleId: workflowForm?.ModuleId || originalWorkflow.ModuleId || "",
+        ProjectId: workflowForm?.ProjectId || originalWorkflow.ProjectId || "",
+        RDLCTypeId: workflowForm?.RDLCTypeId || originalWorkflow.RDLCTypeId || "",
+        DateEffective: workflowForm?.DateEffective || originalWorkflow.DateEffective || new Date().toISOString(),
+        CountryCode: originalWorkflow.CountryCode || "ind",
+        CurrencyCode: originalWorkflow.CurrencyCode || "inr",
+        LanguageCode: originalWorkflow.LanguageCode || "eng",
         WorkFlowSteps: sortedNodes.map((node) => {
           const props = node.data.properties || {};
           const outgoingEdges = edgesCopy.filter((e) => e.source === node.id);
-          const stepCode = "step" + stepCodeMap[node.id];
-          const originalStepData = stepCodeToOriginalId.get(stepCode);
+
+          // Find matching original step to preserve IDs
+          const originalStep = originalSteps.find(step => 
+            step.StepName === node.data.label || 
+            (step.StepName === "Completed" && node.data.nodeShape === "Stop")
+          );
 
           const resolveAction = (actionName) =>
             [...stepActionsOptions, ...stepUsersOptions].find(
@@ -1154,52 +1139,63 @@ const WorkflowEditor = forwardRef(
             .filter((edge) => stepCodeMap[edge.target] !== undefined)
             .map((edge) => {
               const action = resolveAction(edge.label);
-              const targetStepCode = "step" + stepCodeMap[edge.target];
-              const originalTransition = originalStepData?.transitionIds.find(
-                t => t.nextStepCode === targetStepCode
+              // Find matching original transition
+              const originalTransition = originalStep?.WorkFlowStepTransition?.find(t => 
+                t.NextStepCode === "step" + stepCodeMap[edge.target]
               );
-
+              
               return {
-                Id: originalTransition?.id || "",
+                Id: originalTransition?.Id || "",
                 ActionId: action?.ActionId || "",
-                NextStepCode: targetStepCode,
+                NextStepCode: "step" + stepCodeMap[edge.target],
                 FromHandleId: edge.sourceHandle || "",
                 ToHandleId: edge.targetHandle || "",
               };
             });
 
+          // Map actions with preserved IDs
+          const WorkFlowStepAction = (props.StepActions || []).map((actionName) => {
+            const found = stepActionsOptions.find(
+              (a) => a.ActionName === actionName
+            );
+            // Find matching original action
+            const originalAction = originalStep?.WorkFlowStepAction?.find(a => 
+              a.ActionId === found?.ActionId
+            );
+            
+            return {
+              Id: originalAction?.Id || "",
+              ActionId: found?.ActionId || actionName || "Unknown",
+            };
+          });
+
+          // Map users with preserved IDs
+          const WorkFlowStepUser = (props.UserNames || []).map((userName) => {
+            const found = stepUsersOptions.find(
+              (u) => u.UserName === userName
+            );
+            // Find matching original user
+            const originalUser = originalStep?.WorkFlowStepUser?.find(u => 
+              u.UserId === found?.UserId
+            );
+            
+            return {
+              Id: originalUser?.Id || "",
+              UserId: found?.UserId || userName || "Unknown",
+            };
+          });
+
           return {
-            Id: originalStepData?.stepId || "",
-            StepCode: stepCode,
+            Id: originalStep?.Id || "",
+            StepCode: "step" + stepCodeMap[node.id],
             StepName: node.data.nodeShape === "Stop" ? "Completed" : node.data.label,
-            WorkFlowStepAction: (props.StepActions || []).map((actionName) => {
-              const found = stepActionsOptions.find(
-                (a) => a.ActionName === actionName
-              );
-              const originalAction = originalStepData?.actionIds.find(
-                a => a.actionName === found?.ActionId
-              );
-
-              return {
-                Id: originalAction?.id || "",
-                ActionId: found?.ActionId || actionName || "Unknown",
-              };
-            }),
-            WorkFlowStepUser: (props.UserNames || []).map((userName) => {
-              const found = stepUsersOptions.find(
-                (u) => u.UserName === userName
-              );
-              const originalUser = originalStepData?.userIds.find(
-                u => u.userId === found?.UserId
-              );
-
-              return {
-                Id: originalUser?.id || "",
-                UserId: found?.UserId || userName || "Unknown",
-              };
-            }),
+            WorkFlowStepAction,
+            WorkFlowStepUser,
             WorkFlowStepTransition,
-            Position: node.position,
+            Position: {
+              X: node.position.x,
+              Y: node.position.y
+            },
             Properties: {
               PurposeForForward: props.PurposeForForward || "",
               ShortPurposeForForward: props.ShortPurposeForForward || "",
@@ -1208,12 +1204,6 @@ const WorkflowEditor = forwardRef(
           };
         }),
       };
-
-      if (originalWorkflow) {
-        jsonOutput.CountryCode = originalWorkflow.CountryCode;
-        jsonOutput.CurrencyCode = originalWorkflow.CurrencyCode;
-        jsonOutput.LanguageCode = originalWorkflow.LanguageCode;
-      }
 
       console.log("✅ Generated JSON:", jsonOutput);
       return jsonOutput;
