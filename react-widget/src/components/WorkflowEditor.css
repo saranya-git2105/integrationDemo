@@ -599,3 +599,59 @@
 
 /* Touch Device Optimizations */
 
+/* Multi-select styles */
+.multi-value-container {
+  background-color: #e2e8f0;
+  border-radius: 4px;
+  padding: 2px 8px;
+  margin: 2px;
+  font-size: 12px;
+  color: #4a5568;
+}
+
+.multi-value-option {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+.multi-value-option:hover {
+  background-color: #f0f0f0;
+}
+
+.multi-value-checkbox {
+  margin-right: 8px;
+}
+
+.multi-value-label {
+  padding: 2px 8px;
+  background-color: #e2e8f0;
+  border-radius: 4px;
+  color: #4a5568;
+  font-size: 12px;
+}
+
+/* Select component overrides */
+.modal-select .select__multi-value {
+  background-color: transparent;
+  margin: 2px;
+}
+
+.modal-select .select__multi-value__label {
+  padding: 2px 8px;
+  background-color: #e2e8f0;
+  border-radius: 4px;
+  color: #4a5568;
+  font-size: 12px;
+}
+
+.modal-select .select__multi-value__remove {
+  display: none;
+}
+
+.modal-select .select__option {
+  padding: 0;
+  cursor: pointer;
+}
+

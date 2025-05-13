@@ -1017,7 +1017,7 @@ const WorkflowEditor = forwardRef(
       const edgesCopy = [...getEdges()];
 
       // Get the original workflow data from localStorage if it exists
-      const originalWorkflow = JSON.parse(localStorage.getItem("workflowJson") || "{}");
+      const originalWorkflow = JSON.parse(localStorage.getItem("ModifyWorkFlowJson") || "{}");
       const originalSteps = originalWorkflow.WorkFlowSteps || [];
 
       const graph = {};
@@ -2011,37 +2011,58 @@ const WorkflowEditor = forwardRef(
                 className="modal-select common-form-field-height"
                 classNamePrefix="modal-select"
                 components={{
+                  MultiValue: ({ index, getValue, ...props }) => {
+                    const maxToShow = 2;
+                    const values = getValue();
+                    const length = values.length;
+                    
+                    // Don't render anything for indices beyond maxToShow
+                    if (index >= maxToShow) {
+                      return null;
+                    }
+                    
+                    // If this is the second item and there are more items
+                    if (index === 1 && length > maxToShow) {
+                      return (
+                        <>
+                          <div className="multi-value-container">
+                            {props.data.label}
+                          </div>
+                          <div className="multi-value-container">
+                            +{length - maxToShow} more
+                          </div>
+                        </>
+                      );
+                    }
+                    
+                    // For the first item or if there are only 2 or fewer items
+                    return (
+                      <div className="multi-value-container">
+                        {props.data.label}
+                      </div>
+                    );
+                  },
                   Option: ({ children, ...props }) => {
                     const { isSelected, isFocused, innerRef, innerProps } = props;
                     return (
                       <div
                         ref={innerRef}
                         {...innerProps}
+                        className="multi-value-option"
                         style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          padding: '8px 12px',
                           backgroundColor: isFocused ? '#f0f0f0' : 'white',
-                          cursor: 'pointer',
                         }}
                       >
                         <input
                           type="checkbox"
                           checked={isSelected}
                           onChange={() => null}
-                          style={{ marginRight: '8px' }}
+                          className="multi-value-checkbox"
                         />
                         <div>{children}</div>
                       </div>
                     );
                   },
-                }}
-                styles={{
-                  option: (base) => ({
-                    ...base,
-                    padding: 0,
-                    cursor: 'pointer',
-                  }),
                 }}
               />
             </div>
@@ -2072,6 +2093,60 @@ const WorkflowEditor = forwardRef(
                 }
                 className="modal-select common-form-field-height"
                 classNamePrefix="modal-select"
+                components={{
+                  MultiValue: ({ index, getValue, ...props }) => {
+                    const maxToShow = 2;
+                    const values = getValue();
+                    const length = values.length;
+                    
+                    // Don't render anything for indices beyond maxToShow
+                    if (index >= maxToShow) {
+                      return null;
+                    }
+                    
+                    // If this is the second item and there are more items
+                    if (index === 1 && length > maxToShow) {
+                      return (
+                        <>
+                          <div className="multi-value-container">
+                            {props.data.label}
+                          </div>
+                          <div className="multi-value-container">
+                            +{length - maxToShow} more
+                          </div>
+                        </>
+                      );
+                    }
+                    
+                    // For the first item or if there are only 2 or fewer items
+                    return (
+                      <div className="multi-value-container">
+                        {props.data.label}
+                      </div>
+                    );
+                  },
+                  Option: ({ children, ...props }) => {
+                    const { isSelected, isFocused, innerRef, innerProps } = props;
+                    return (
+                      <div
+                        ref={innerRef}
+                        {...innerProps}
+                        className="multi-value-option"
+                        style={{
+                          backgroundColor: isFocused ? '#f0f0f0' : 'white',
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => null}
+                          className="multi-value-checkbox"
+                        />
+                        <div>{children}</div>
+                      </div>
+                    );
+                  },
+                }}
               />
             </div>
             {/* Buttons */}
