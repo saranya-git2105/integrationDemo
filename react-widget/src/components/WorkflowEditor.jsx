@@ -1112,10 +1112,10 @@ const WorkflowEditor = forwardRef(
       // Build JSON
       const jsonOutput = {
         Id: originalWorkflow.Id || workflowForm?.Id || "",
-        WorkFlowName: workflowForm?.WorkFlowName || originalWorkflow.WorkFlowName || "Untitled Workflow",
-        ModuleId: workflowForm?.ModuleId || originalWorkflow.ModuleId || "",
-        ProjectId: workflowForm?.ProjectId || originalWorkflow.ProjectId || "",
-        RDLCTypeId: workflowForm?.RDLCTypeId || originalWorkflow.RDLCTypeId || "",
+        WorkFlowName: workflowForm?.WorkFlowName ,
+        ModuleId: workflowForm?.ModuleId ,
+        ProjectId: workflowForm?.ProjectId ,
+        RDLCTypeId: workflowForm?.RDLCTypeId ,
         DateEffective: workflowForm?.DateEffective || originalWorkflow.DateEffective || new Date().toISOString(),
         CountryCode: originalWorkflow.CountryCode || "ind",
         CurrencyCode: originalWorkflow.CurrencyCode || "inr",
