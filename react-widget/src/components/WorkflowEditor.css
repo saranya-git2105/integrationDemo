@@ -27,7 +27,7 @@
   margin: 0;
   text-align: center;
   color: #0284c7;
-  font-size: 18px;
+  font-size: 18px !important;
   font-weight: 600;
 }
 
@@ -38,7 +38,7 @@
 }
 
 .workflow-editor-container .control-button {
-  background: #e2e8f0;
+  background: #fff;
   border-radius: 50%;
   padding: 0;
   cursor: pointer;
@@ -70,7 +70,7 @@
   font-weight: bold;
   margin: 0;
   color: #0ea5e9;
-  font-size: 18px;
+  font-size: 16px;
 }
 
 .workflow-editor-container .node-type-item {
@@ -88,7 +88,7 @@
   /* min-height: 44px; */
 }
 .workflow-editor-container .node-type-item span{
-  font-size: 18px !important;
+  font-size: 16px !important;
 }
 .workflow-editor-container .node-type-shape {
   width: 28px;
@@ -425,6 +425,26 @@
 .node-properties-modal .modal-select__menu{
   gap: 0 8px !important;
 }
+@media screen and (max-width: 1250px) {
+  .workflow-editor-container .workflow-sidebar {
+  width: 200px;
+  padding: 10px;
+  gap: 10px;
+}
+.workflow-editor-container .node-types-title {
+  font-size: 14px;
+}
+
+.workflow-editor-container .node-type-item {
+  font-size: 14px;
+}
+.workflow-editor-container .node-type-item span{
+  font-size: 14px !important;
+}
+.workflow-editor-container .sidebar-title {
+  font-size: 16px !important;
+}
+}
 /* Tablet Responsive Styles */
 @media screen and (max-width: 1024px) {
   .workflow-editor-container .workflow-sidebar {
@@ -513,11 +533,11 @@
     flex-direction: row !important;
     justify-content: center !important;
     align-items: center;
-    gap: 0 20px;
-    padding: 0;
+    gap: 0 5px;
+    padding: 10px;
     width: 100%;
     margin-bottom: 10px;
-    padding-top: 10px !important;
+    padding: 10px !important;
     border:0 !important;
     border-top:1px solid #cbd5e1 !important;
     border-radius: 0;

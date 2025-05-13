@@ -1016,6 +1016,32 @@ const WorkflowEditor = forwardRef(
       const nodesCopy = [...getNodes()];
       const edgesCopy = [...getEdges()];
 
+      // Get the original workflow JSON from localStorage
+      const originalWorkflowJson = localStorage.getItem('ModifyWorkflowJson');
+      const originalWorkflow = originalWorkflowJson ? JSON.parse(originalWorkflowJson) : null;
+
+      // Create a map of step codes to their original IDs
+      const stepCodeToOriginalId = new Map();
+      if (originalWorkflow?.WorkFlowSteps) {
+        originalWorkflow.WorkFlowSteps.forEach(step => {
+          stepCodeToOriginalId.set(step.StepCode, {
+            stepId: step.Id,
+            actionIds: step.WorkFlowStepAction?.map(action => ({
+              actionName: action.ActionId,
+              id: action.Id
+            })) || [],
+            userIds: step.WorkFlowStepUser?.map(user => ({
+              userId: user.UserId,
+              id: user.Id
+            })) || [],
+            transitionIds: step.WorkFlowStepTransition?.map(transition => ({
+              nextStepCode: transition.NextStepCode,
+              id: transition.Id
+            })) || []
+          });
+        });
+      }
+
       const graph = {};
       const visited = new Set();
       const sortedNodes = [];
@@ -1097,7 +1123,7 @@ const WorkflowEditor = forwardRef(
           dfs(neighbor.target);
         }
       };
-      console.log("🚨 Start node right before DFS:", startNode);
+
       dfs(startNode.id);
 
       // Optional: include disconnected nodes too (if desired)
@@ -1107,15 +1133,17 @@ const WorkflowEditor = forwardRef(
 
       // Build JSON
       const jsonOutput = {
-        Id: "",
-        WorkFlowName: workflowForm.WorkFlowName || "Untitled Workflow",
-        ModuleId: workflowForm.ModuleId || "",
-        ProjectId: workflowForm.ProjectId || "",
-        RDLCTypeId: workflowForm.RDLCTypeId || "",
-        DateEffective: workflowForm.DateEffective,
+        Id: originalWorkflow?.Id || workflowForm?.Id || "",
+        WorkFlowName: workflowForm?.WorkFlowName || "Untitled Workflow",
+        ModuleId: workflowForm?.ModuleId || "",
+        ProjectId: workflowForm?.ProjectId || "",
+        RDLCTypeId: workflowForm?.RDLCTypeId || "",
+        DateEffective: workflowForm?.DateEffective || new Date().toISOString(),
         WorkFlowSteps: sortedNodes.map((node) => {
           const props = node.data.properties || {};
           const outgoingEdges = edgesCopy.filter((e) => e.source === node.id);
+          const stepCode = "step" + stepCodeMap[node.id];
+          const originalStepData = stepCodeToOriginalId.get(stepCode);
 
           const resolveAction = (actionName) =>
             [...stepActionsOptions, ...stepUsersOptions].find(
@@ -1126,26 +1154,34 @@ const WorkflowEditor = forwardRef(
             .filter((edge) => stepCodeMap[edge.target] !== undefined)
             .map((edge) => {
               const action = resolveAction(edge.label);
+              const targetStepCode = "step" + stepCodeMap[edge.target];
+              const originalTransition = originalStepData?.transitionIds.find(
+                t => t.nextStepCode === targetStepCode
+              );
+
               return {
-                Id: "",
-                ActionId: action?.ActionId,
-                NextStepCode: "step" + stepCodeMap[edge.target],
+                Id: originalTransition?.id || "",
+                ActionId: action?.ActionId || "",
+                NextStepCode: targetStepCode,
                 FromHandleId: edge.sourceHandle || "",
                 ToHandleId: edge.targetHandle || "",
               };
             });
 
           return {
-            Id: "",
-            StepCode: "step" + stepCodeMap[node.id],
-            StepName:
-              node.data.nodeShape === "Stop" ? "Completed" : node.data.label,
+            Id: originalStepData?.stepId || "",
+            StepCode: stepCode,
+            StepName: node.data.nodeShape === "Stop" ? "Completed" : node.data.label,
             WorkFlowStepAction: (props.StepActions || []).map((actionName) => {
               const found = stepActionsOptions.find(
                 (a) => a.ActionName === actionName
               );
+              const originalAction = originalStepData?.actionIds.find(
+                a => a.actionName === found?.ActionId
+              );
+
               return {
-                Id: "",
+                Id: originalAction?.id || "",
                 ActionId: found?.ActionId || actionName || "Unknown",
               };
             }),
@@ -1153,8 +1189,12 @@ const WorkflowEditor = forwardRef(
               const found = stepUsersOptions.find(
                 (u) => u.UserName === userName
               );
+              const originalUser = originalStepData?.userIds.find(
+                u => u.userId === found?.UserId
+              );
+
               return {
-                Id: "",
+                Id: originalUser?.id || "",
                 UserId: found?.UserId || userName || "Unknown",
               };
             }),
@@ -1168,6 +1208,12 @@ const WorkflowEditor = forwardRef(
           };
         }),
       };
+
+      if (originalWorkflow) {
+        jsonOutput.CountryCode = originalWorkflow.CountryCode;
+        jsonOutput.CurrencyCode = originalWorkflow.CurrencyCode;
+        jsonOutput.LanguageCode = originalWorkflow.LanguageCode;
+      }
 
       console.log("✅ Generated JSON:", jsonOutput);
       return jsonOutput;
