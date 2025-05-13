@@ -1112,10 +1112,10 @@ const WorkflowEditor = forwardRef(
       // Build JSON
       const jsonOutput = {
         Id: originalWorkflow.Id || workflowForm?.Id || "",
-        WorkFlowName: workflowForm?.WorkFlowName ,
-        ModuleId: workflowForm?.ModuleId ,
-        ProjectId: workflowForm?.ProjectId ,
-        RDLCTypeId: workflowForm?.RDLCTypeId ,
+        WorkFlowName: workflowForm?.WorkFlowName,
+        ModuleId: workflowForm?.ModuleId,
+        ProjectId: workflowForm?.ProjectId,
+        RDLCTypeId: workflowForm?.RDLCTypeId,
         DateEffective: workflowForm?.DateEffective || originalWorkflow.DateEffective || new Date().toISOString(),
         CountryCode: originalWorkflow.CountryCode || "ind",
         CurrencyCode: originalWorkflow.CurrencyCode || "inr",
@@ -1123,7 +1123,9 @@ const WorkflowEditor = forwardRef(
         WorkFlowSteps: sortedNodes.map((node) => {
           const props = node.data.properties || {};
           const outgoingEdges = edgesCopy.filter((e) => e.source === node.id);
-          const stepCode = "step" + stepCodeMap[node.id];
+          
+          // Use existing StepCode or generate new one
+          const stepCode = props.StepCode || "step" + stepCodeMap[node.id];
 
           // Find matching original step by StepCode
           const originalStep = originalSteps.find(step => step.StepCode === stepCode);
@@ -1137,15 +1139,18 @@ const WorkflowEditor = forwardRef(
             .filter((edge) => stepCodeMap[edge.target] !== undefined)
             .map((edge) => {
               const action = resolveAction(edge.label);
+              const targetNode = nodesCopy.find(n => n.id === edge.target);
+              const targetStepCode = targetNode?.data?.properties?.StepCode || "step" + stepCodeMap[edge.target];
+              
               // Find matching original transition
               const originalTransition = originalStep?.WorkFlowStepTransition?.find(t => 
-                t.NextStepCode === "step" + stepCodeMap[edge.target]
+                t.NextStepCode === targetStepCode
               );
               
               return {
                 Id: originalTransition?.Id || "",
                 ActionId: action?.ActionId || "",
-                NextStepCode: "step" + stepCodeMap[edge.target],
+                NextStepCode: targetStepCode,
                 FromHandleId: edge.sourceHandle || "",
                 ToHandleId: edge.targetHandle || "",
               };
@@ -1287,8 +1292,10 @@ const WorkflowEditor = forwardRef(
       const props = node.data.properties || {};
       const originalWorkflow = JSON.parse(localStorage.getItem("ModifyWorkFlowJson") || "{}");
       
+      // Get the step code from the node's data
+      const stepCode = props.StepCode || `step${nodes.findIndex(n => n.id === node.id)}`;
+      
       // Find the original step by matching the StepCode
-      const stepCode = `step${nodes.findIndex(n => n.id === node.id)}`;
       const originalStep = originalWorkflow.WorkFlowSteps?.find(step => 
         step.StepCode === stepCode
       );
