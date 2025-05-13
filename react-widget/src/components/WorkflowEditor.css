@@ -281,6 +281,7 @@
 
 .node-properties-modal .modal-select {
   font-size: 14px;
+  position: relative;
 }
 
 .node-properties-modal .modal-select-option {
@@ -424,6 +425,93 @@
 }
 .node-properties-modal .modal-select__menu{
   gap: 0 8px !important;
+}
+/* Multi-select styles */
+.multi-value-container {
+  background-color: #e2e8f0;
+  border-radius: 4px;
+  padding: 2px 8px;
+  margin: 2px;
+  font-size: 12px;
+  color: #4a5568;
+}
+
+.multi-value-option {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+.multi-value-option:hover {
+  background-color: #f0f0f0;
+}
+
+.multi-value-checkbox {
+  margin-right: 8px;
+}
+
+.multi-value-label {
+  padding: 2px 8px;
+  background-color: #e2e8f0;
+  border-radius: 4px;
+  color: #4a5568;
+  font-size: 12px;
+}
+
+/* Select component overrides */
+.modal-select .select__multi-value {
+  background-color: transparent;
+  margin: 2px;
+}
+
+.modal-select .select__multi-value__label {
+  padding: 2px 8px;
+  background-color: #e2e8f0;
+  border-radius: 4px;
+  color: #4a5568;
+  font-size: 12px;
+}
+
+.modal-select .select__multi-value__remove {
+  display: none;
+}
+
+.modal-select .select__option {
+  padding: 0;
+  cursor: pointer;
+}
+
+/* Count number positioning */
+.modal-select .select__value-container {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  padding-right: 30px !important;
+}
+
+.modal-select .select__value-container > div:last-child {
+  position: absolute;
+  right: 8px;
+  color: #4a5568;
+  font-size: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 1;
+}
+
+.modal-select .select__input-container {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.modal-select .select__control {
+  min-height: 40px !important;
+}
+.count-number{
+  position: absolute;
+  right: 0;
 }
 @media screen and (max-width: 1250px) {
   .workflow-editor-container .workflow-sidebar {
@@ -599,87 +687,4 @@
 
 /* Touch Device Optimizations */
 
-/* Multi-select styles */
-.multi-value-container {
-  background-color: #e2e8f0;
-  border-radius: 4px;
-  padding: 2px 8px;
-  margin: 2px;
-  font-size: 12px;
-  color: #4a5568;
-}
-
-.multi-value-option {
-  display: flex;
-  align-items: center;
-  padding: 8px 12px;
-  cursor: pointer;
-}
-
-.multi-value-option:hover {
-  background-color: #f0f0f0;
-}
-
-.multi-value-checkbox {
-  margin-right: 8px;
-}
-
-.multi-value-label {
-  padding: 2px 8px;
-  background-color: #e2e8f0;
-  border-radius: 4px;
-  color: #4a5568;
-  font-size: 12px;
-}
-
-/* Select component overrides */
-.modal-select .select__multi-value {
-  background-color: transparent;
-  margin: 2px;
-}
-
-.modal-select .select__multi-value__label {
-  padding: 2px 8px;
-  background-color: #e2e8f0;
-  border-radius: 4px;
-  color: #4a5568;
-  font-size: 12px;
-}
-
-.modal-select .select__multi-value__remove {
-  display: none;
-}
-
-.modal-select .select__option {
-  padding: 0;
-  cursor: pointer;
-}
-
-/* Count number positioning */
-.modal-select .select__value-container {
-  position: relative;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  padding-right: 30px !important;
-}
-
-.modal-select .select__value-container > div:last-child {
-  position: absolute;
-  right: 8px;
-  color: #4a5568;
-  font-size: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  z-index: 1;
-}
-
-.modal-select .select__input-container {
-  margin: 0 !important;
-  padding: 0 !important;
-}
-
-.modal-select .select__control {
-  min-height: 40px !important;
-}
 

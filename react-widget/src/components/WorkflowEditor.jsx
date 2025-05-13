@@ -1123,12 +1123,10 @@ const WorkflowEditor = forwardRef(
         WorkFlowSteps: sortedNodes.map((node) => {
           const props = node.data.properties || {};
           const outgoingEdges = edgesCopy.filter((e) => e.source === node.id);
+          const stepCode = "step" + stepCodeMap[node.id];
 
-          // Find matching original step to preserve IDs
-          const originalStep = originalSteps.find(step => 
-            step.StepName === node.data.label || 
-            (step.StepName === "Completed" && node.data.nodeShape === "Stop")
-          );
+          // Find matching original step by StepCode
+          const originalStep = originalSteps.find(step => step.StepCode === stepCode);
 
           const resolveAction = (actionName) =>
             [...stepActionsOptions, ...stepUsersOptions].find(
@@ -1187,7 +1185,7 @@ const WorkflowEditor = forwardRef(
 
           return {
             Id: originalStep?.Id || "",
-            StepCode: "step" + stepCodeMap[node.id],
+            StepCode: stepCode,
             StepName: node.data.nodeShape === "Stop" ? "Completed" : node.data.label,
             WorkFlowStepAction,
             WorkFlowStepUser,
@@ -1288,9 +1286,11 @@ const WorkflowEditor = forwardRef(
 
       const props = node.data.properties || {};
       const originalWorkflow = JSON.parse(localStorage.getItem("ModifyWorkFlowJson") || "{}");
+      
+      // Find the original step by matching the StepCode
+      const stepCode = `step${nodes.findIndex(n => n.id === node.id)}`;
       const originalStep = originalWorkflow.WorkFlowSteps?.find(step => 
-        step.StepName === node.data.label || 
-        (step.StepName === "Completed" && node.data.nodeShape === "Stop")
+        step.StepCode === stepCode
       );
 
       // Normalize keys for modal with preserved IDs
@@ -1322,7 +1322,8 @@ const WorkflowEditor = forwardRef(
           : [],
         purposeForForward: props.PurposeForForward || "",
         shortPurposeForForward: props.ShortPurposeForForward || "",
-        Id: originalStep?.Id || ""
+        Id: originalStep?.Id || "",
+        StepCode: stepCode
       };
       console.log("🎯 Normalized Props:", normalizedProps);
       setNodeProperties(normalizedProps);
@@ -1360,6 +1361,7 @@ const WorkflowEditor = forwardRef(
                 label: nodeProperties.stepName || n.data.label,
                 properties: {
                   Id: nodeProperties.Id || "",
+                  StepCode: nodeProperties.StepCode || "",
                   StepName: nodeProperties.stepName || "",
                   PurposeForForward: nodeProperties.purposeForForward || "",
                   ShortPurposeForForward:
