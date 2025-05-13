@@ -1287,23 +1287,48 @@ const WorkflowEditor = forwardRef(
       setSelectedNode(node);
 
       const props = node.data.properties || {};
+      const originalWorkflow = JSON.parse(localStorage.getItem("ModifyWorkFlowJson") || "{}");
+      const originalStep = originalWorkflow.WorkFlowSteps?.find(step => 
+        step.StepName === node.data.label || 
+        (step.StepName === "Completed" && node.data.nodeShape === "Stop")
+      );
 
-      // Normalize keys for modal
+      // Normalize keys for modal with preserved IDs
       const normalizedProps = {
         stepName: props.StepName || node.data.label,
         stepActions: Array.isArray(props.StepActions)
-          ? props.StepActions
+          ? props.StepActions.map(actionName => {
+              const found = stepActionsOptions.find(a => a.ActionName === actionName);
+              const originalAction = originalStep?.WorkFlowStepAction?.find(a => 
+                a.ActionId === found?.ActionId
+              );
+              return {
+                name: actionName,
+                id: originalAction?.Id || ""
+              };
+            })
           : [],
         UserNames: Array.isArray(props.UserNames)
-          ? props.UserNames
+          ? props.UserNames.map(userName => {
+              const found = stepUsersOptions.find(u => u.UserName === userName);
+              const originalUser = originalStep?.WorkFlowStepUser?.find(u => 
+                u.UserId === found?.UserId
+              );
+              return {
+                name: userName,
+                id: originalUser?.Id || ""
+              };
+            })
           : [],
         purposeForForward: props.PurposeForForward || "",
         shortPurposeForForward: props.ShortPurposeForForward || "",
+        Id: originalStep?.Id || ""
       };
       console.log("🎯 Normalized Props:", normalizedProps);
       setNodeProperties(normalizedProps);
       setModalIsOpen(true);
     };
+
     // Function to update node properties
     const updateNodeProperties = (e) => {
       const { name } = e.target;
@@ -1334,12 +1359,13 @@ const WorkflowEditor = forwardRef(
                 ...n.data,
                 label: nodeProperties.stepName || n.data.label,
                 properties: {
+                  Id: nodeProperties.Id || "",
                   StepName: nodeProperties.stepName || "",
                   PurposeForForward: nodeProperties.purposeForForward || "",
                   ShortPurposeForForward:
                     nodeProperties.shortPurposeForForward || "",
-                  StepActions: nodeProperties.stepActions || [],
-                  UserNames: nodeProperties.UserNames || [],
+                  StepActions: nodeProperties.stepActions?.map(action => action.name) || [],
+                  UserNames: nodeProperties.UserNames?.map(user => user.name) || [],
                   NodeShape: n.data.nodeShape,
                 },
               },
@@ -1352,7 +1378,7 @@ const WorkflowEditor = forwardRef(
         const updated = eds.map((e) => {
           if (e.source === selectedNode.id) {
             const actionIndex = outgoing.findIndex((x) => x.id === e.id);
-            const newLabel = nodeProperties.stepActions?.[actionIndex] || e.label;
+            const newLabel = nodeProperties.stepActions?.[actionIndex]?.name || e.label;
             return {
               ...e,
               label: newLabel,
