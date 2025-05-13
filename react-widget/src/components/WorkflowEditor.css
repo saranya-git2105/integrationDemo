@@ -12,7 +12,7 @@
 /* Sidebar styles */
 .workflow-editor-container .workflow-sidebar {
   width: 250px;
-  background: #ffffff;
+  background: rgb(226, 232, 240);
   border-right: 1px solid #e2e8f0;
   padding: 15px;
   display: flex;
@@ -157,10 +157,11 @@
 /* Modal styles */
 .node-properties-modal .modal-header {
   text-align: center;
-  margin-bottom: 15px;
+  justify-content: center;
+  margin-bottom: 15px !important;
   margin-top: 0;
   font-weight: bold;
-  font-size: 20px;
+  font-size: 18px !important;
   color: #1e293b;
 }
 
@@ -399,7 +400,7 @@
   text-align: left;
 }
 .node-properties-modal .form-input-section .modal-input{
-  width: 96%;
+  width: 100%;
   padding: 0 8px !important;
 }
 .node-properties-modal .form-input-section .modal-select{
@@ -415,7 +416,7 @@
   overflow-x: hidden;
 }
 .node-properties-modal .common-form-field-height{
-  height: 40px !important;
+  min-height: 40px !important;
 }
 .workflow-editor-container .desktop-only {
   display: block;
