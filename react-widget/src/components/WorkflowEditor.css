@@ -655,3 +655,31 @@
   cursor: pointer;
 }
 
+/* Count number positioning */
+.modal-select .select__value-container {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  padding-right: 30px !important;
+}
+
+.modal-select .select__value-container > div:last-child {
+  position: absolute;
+  right: 8px;
+  color: #4a5568;
+  font-size: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 1;
+}
+
+.modal-select .select__input-container {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.modal-select .select__control {
+  min-height: 40px !important;
+}
+

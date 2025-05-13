@@ -1364,8 +1364,12 @@ const WorkflowEditor = forwardRef(
                   PurposeForForward: nodeProperties.purposeForForward || "",
                   ShortPurposeForForward:
                     nodeProperties.shortPurposeForForward || "",
-                  StepActions: nodeProperties.stepActions?.map(action => action.name) || [],
-                  UserNames: nodeProperties.UserNames?.map(user => user.name) || [],
+                  StepActions: nodeProperties.stepActions?.map(action => 
+                    typeof action === 'string' ? action : action.name
+                  ) || [],
+                  UserNames: nodeProperties.UserNames?.map(user => 
+                    typeof user === 'string' ? user : user.name
+                  ) || [],
                   NodeShape: n.data.nodeShape,
                 },
               },
@@ -1378,7 +1382,9 @@ const WorkflowEditor = forwardRef(
         const updated = eds.map((e) => {
           if (e.source === selectedNode.id) {
             const actionIndex = outgoing.findIndex((x) => x.id === e.id);
-            const newLabel = nodeProperties.stepActions?.[actionIndex]?.name || e.label;
+            const newLabel = nodeProperties.stepActions?.[actionIndex]?.name || 
+                           (typeof nodeProperties.stepActions?.[actionIndex] === 'string' ? 
+                           nodeProperties.stepActions?.[actionIndex] : e.label);
             return {
               ...e,
               label: newLabel,
@@ -2054,8 +2060,8 @@ const WorkflowEditor = forwardRef(
                           <div className="multi-value-container">
                             {props.data.label}
                           </div>
-                          <div className="multi-value-container">
-                            +{length - maxToShow} more
+                          <div className="count-number">
+                            +{length - maxToShow}
                           </div>
                         </>
                       );
@@ -2137,8 +2143,8 @@ const WorkflowEditor = forwardRef(
                           <div className="multi-value-container">
                             {props.data.label}
                           </div>
-                          <div className="multi-value-container">
-                            +{length - maxToShow} more
+                          <div className="count-number">
+                            +{length - maxToShow}
                           </div>
                         </>
                       );
