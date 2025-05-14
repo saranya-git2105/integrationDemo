@@ -139,10 +139,25 @@ const CustomNode = ({ data, onRename, onEdit, onDelete, isLocked }) => {
       {/* Tooltip */}
       {hovered && properties && Object.keys(properties).length > 0 && (() => {
         const nodeX = data.__rf?.position?.x || 0;
-        const isLeftSide = nodeX < 300;
+        const nodeY = data.__rf?.position?.y || 0;
+        
+        // Determine tooltip position based on node position in viewport
+        let tooltipClass = 'tooltip-left'; // default
+        
+        // If node is in the left half, show tooltip on right
+        // If node is in the right half, show tooltip on left
+        if (nodeX < 400) {
+          tooltipClass = 'tooltip-right';
+        } else if (nodeX > 800) {
+          tooltipClass = 'tooltip-left';
+        } else if (nodeY < 200) {
+          tooltipClass = 'tooltip-bottom';
+        } else {
+          tooltipClass = 'tooltip-top';
+        }
 
         return (
-          <div className={`node-tooltip ${isLeftSide ? 'tooltip-left' : 'tooltip-right'}`}>
+          <div className={`node-tooltip ${tooltipClass}`}>
             <strong className="tooltip-title">🔍 Properties</strong>
             {Object.entries(properties).map(([key, value]) => {
               if (!value || (Array.isArray(value) && value.length === 0)) return null;
