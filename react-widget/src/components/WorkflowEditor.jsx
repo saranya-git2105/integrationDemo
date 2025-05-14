@@ -22,6 +22,8 @@ import { ControlButton } from "reactflow";
 import { FaLock, FaUnlock } from "react-icons/fa";
 import "reactflow/dist/style.css";
 import Modal from "react-modal";
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import CustomNode from "./CustomNode";
 import CustomSmoothEdge from "./CustomSmoothEdge";
 import { generate_styled_edges, layoutTopDownCustom } from "../utils/layout";
@@ -126,9 +128,14 @@ const WorkflowEditor = forwardRef(
         );
 
         if (!startNodeExists && actionType !== "view") {
-          alert(
-            "⚠️ Please drag and place a Start node first before saving or viewing the workflow."
-          );
+          toast.warning("⚠️ Please drag and place a Start node first before saving or viewing the workflow.", {
+            position: "top-right",
+            autoClose: 3000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: true,
+            draggable: true,
+          });
           return;
         }
         /*if (actionType === "save") {
@@ -310,9 +317,14 @@ const WorkflowEditor = forwardRef(
           const currentEdges = getEdges();
           console.log("Current nodes from Angular call:", currentNodes);
           if (currentNodes.length === 0) {
-            alert(
-              "⚠️ Please add at least one node to the workflow before viewing JSON."
-            );
+            toast.warning("⚠️ Please add at least one node to the workflow before viewing JSON.", {
+              position: "top-right",
+              autoClose: 3000,
+              hideProgressBar: false,
+              closeOnClick: true,
+              pauseOnHover: true,
+              draggable: true,
+            });
             return;
           }
           viewJson();
@@ -459,6 +471,14 @@ const WorkflowEditor = forwardRef(
     };
     const showLockedToast = () => {
       if (!lockedToast) {
+        toast.warning("🔒 Canvas is locked. Unlock to make changes.", {
+          position: "top-right",
+          autoClose: 2000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+        });
         setLockedToast(true);
         setTimeout(() => setLockedToast(false), 2000);
       }
@@ -479,11 +499,25 @@ const WorkflowEditor = forwardRef(
 
       // Check if trying to add Start/Stop node when one already exists
       if (nodeType === "Start" && nodes.some(n => n.data.nodeShape === "Start")) {
-        alert("⚠️ A Start node already exists in the workflow. Only one Start node is allowed.");
+        toast.error("⚠️ A Start node already exists in the workflow. Only one Start node is allowed.", {
+          position: "top-right",
+          autoClose: 3000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+        });
         return;
       }
       if (nodeType === "Stop" && nodes.some(n => n.data.nodeShape === "Stop")) {
-        alert("⚠️ A Stop node already exists in the workflow. Only one Stop node is allowed.");
+        toast.error("⚠️ A Stop node already exists in the workflow. Only one Stop node is allowed.", {
+          position: "top-right",
+          autoClose: 3000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+        });
         return;
       }
 
@@ -1021,7 +1055,14 @@ const WorkflowEditor = forwardRef(
 
       if (!startNode) {
         console.error("Start node is STILL undefined — nodesCopy:", nodesCopy);
-        alert("Still no Start node even after adding one automatically.");
+        toast.error("Still no Start node even after adding one automatically.", {
+          position: "top-right",
+          autoClose: 3000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+        });
         return;
       }
 
@@ -1467,6 +1508,18 @@ const WorkflowEditor = forwardRef(
 
     return (
       <div className="workflow-editor-container">
+        <ToastContainer
+          position="top-right"
+          autoClose={3000}
+          hideProgressBar={false}
+          newestOnTop
+          closeOnClick
+          rtl={false}
+          pauseOnFocusLoss
+          draggable
+          pauseOnHover
+          theme="light"
+        />
         {/* Sidebar Menu */}
         <div className="workflow-sidebar">
           {/* Only show titles on desktop */}
@@ -1586,9 +1639,14 @@ const WorkflowEditor = forwardRef(
                 ? showLockedToast
                 : (params) => {
                   if (params.source === "stop") {
-                    alert(
-                      "🚫 You cannot draw connections from the Stop node."
-                    );
+                    toast.error("🚫 You cannot draw connections from the Stop node.", {
+                      position: "top-right",
+                      autoClose: 3000,
+                      hideProgressBar: false,
+                      closeOnClick: true,
+                      pauseOnHover: true,
+                      draggable: true,
+                    });
                     return;
                   }
                   addToUndoStack();
@@ -1863,7 +1921,14 @@ const WorkflowEditor = forwardRef(
                 const nodeId = nodeContextMenu.node.id;
                 const nodeShape = nodeContextMenu.node.data.nodeShape;
                 if (nodeShape === "Start" || nodeShape === "Stop") {
-                  alert("🚫 Start and Stop nodes cannot be deleted.");
+                  toast.error("🚫 Start and Stop nodes cannot be deleted.", {
+                    position: "top-right",
+                    autoClose: 3000,
+                    hideProgressBar: false,
+                    closeOnClick: true,
+                    pauseOnHover: true,
+                    draggable: true,
+                  });
                   return;
                 }
                 addToUndoStack();
