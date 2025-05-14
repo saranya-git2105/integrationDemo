@@ -62,11 +62,6 @@ const actionsResponse = {
 };
 
 const employeesResponse = {
-  "ReturnCode": 0,
-  "ReturnMessage": "success",
-  "ResponseTime": "578",
-  "RecordCount": 587,
-  "Headers": null,
   "Data": [
     {
       "Id": "760792A1-3302-4033-98A1-80C32FBB9BE4",

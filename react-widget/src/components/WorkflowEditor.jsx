@@ -263,7 +263,7 @@ const WorkflowEditor = forwardRef(
       if (!getUsers) return;
       Promise.resolve(getUsers())
         .then((data) => {
-          if (data?.ReturnCode === 0 && Array.isArray(data.Data)) {
+          if (Array.isArray(data.Data)) {
             const userOptions = data.Data.map((user) => ({
               UserId: user.HRMSEmployeeId,
               UserName: user.Name,
@@ -658,7 +658,7 @@ const WorkflowEditor = forwardRef(
           const usersData = await Promise.resolve(getUsers());
           console.log("📥 Raw Users Response:", usersData);
 
-          if (usersData?.ReturnCode === 0 && Array.isArray(usersData.Data)) {
+          if (Array.isArray(usersData.Data)) {
             users = usersData.Data.map((user) => ({
               UserId: user.HRMSEmployeeId,
               UserName: user.Name,
