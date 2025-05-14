@@ -317,7 +317,7 @@
   border-radius: 8px;
   box-shadow: 0 4px 8px rgba(0,0,0,0.1);
   padding: 10px;
-  z-index: 1000;
+  z-index: 700;
   min-width: 140px;
 }
 
@@ -513,6 +513,231 @@
   position: absolute;
   right: 0;
 }
+
+.node-base {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: #fff;
+  text-align: center;
+  font-weight: bold;
+  font-size: 12px;
+  position: relative;
+  cursor: pointer;
+  border: 1px solid #000;
+  transition: border 0.2s;
+  z-index: 1;
+}
+
+.node-base:hover {
+  border: 1px solid #333;
+}
+
+.node-base .node-content {
+  padding: 4px;
+  text-align: center;
+}
+
+.node-shape-start,
+.node-shape-stop {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+}
+
+.node-shape-start {
+  background: #9fda7c;
+}
+
+.node-shape-stop {
+  background: #FFB7B4;
+}
+
+.node-shape-decision {
+  width: 80px;
+  height: 80px;
+  background: transparent;
+  clip-path: none;
+  overflow: visible;
+  z-index: 1;
+}
+
+.node-shape-decision .decision-inner {
+  width: 100%;
+  height: 100%;
+  background: #B388EB;
+  clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-weight: bold;
+  font-size: 12px;
+  padding: 4px;
+  color: #fff;
+}
+
+.node-shape-step {
+  width: 120px;
+  height: 50px;
+  border-radius: 8px;
+  background: #82d6f7;
+}
+
+/* Handle containers */
+.node-handle-container {
+  position: absolute;
+  pointer-events: all;
+  z-index: 10;
+}
+
+.node-handle-container .handle {
+  width: 8px;
+  height: 8px;
+  background: rgba(0,255,0,0.3);
+  position: absolute;
+  opacity: 0;
+}
+
+/* Handle positions for different nodes */
+.handle-start-out {
+  bottom: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.handle-stop-in {
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+/* Decision node handles */
+.handle-decision-top-target {
+  top: -20px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.handle-decision-right-source {
+  right: -12px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.handle-decision-bottom-target {
+  bottom: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.handle-decision-left-source {
+  left: -12px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+/* Step node handles */
+.handle-step-top-target {
+  top: -12px;
+  left: 30%;
+  transform: translateX(-50%);
+}
+
+.handle-step-top-source {
+  top: -12px;
+  left: 70%;
+  transform: translateX(-50%);
+}
+
+.handle-step-right-target {
+  right: -12px;
+  top: 30%;
+  transform: translateY(-50%);
+}
+
+.handle-step-right-source {
+  right: -12px;
+  top: 70%;
+  transform: translateY(-50%);
+}
+
+.handle-step-bottom-target {
+  bottom: -13px;
+  left: 30%;
+  transform: translateX(-50%);
+}
+
+.handle-step-bottom-source {
+  bottom: -13px;
+  left: 70%;
+  transform: translateX(-50%);
+}
+
+.handle-step-left-target {
+  left: -12px;
+  top: 30%;
+  transform: translateY(-50%);
+}
+
+.handle-step-left-source {
+  left: -12px;
+  top: 70%;
+  transform: translateY(-50%);
+}
+
+/* Tooltip */
+.node-tooltip {
+  position: absolute;
+  background: #fefce8;
+  color: #1e293b;
+  border: 1px solid #facc15;
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 13px;
+  min-width: 200px;
+  max-width: 280px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  z-index: 9999 !important;
+  white-space: normal;
+  text-align: left;
+  opacity: 0.95;
+}
+
+.node-tooltip.tooltip-left {
+  left: 110%;
+  top: 0%;
+}
+
+.node-tooltip.tooltip-right {
+  right: 110%;
+  top: 0%;
+}
+
+.node-tooltip .tooltip-title {
+  display: block;
+  margin-bottom: 6px;
+}
+
+.node-tooltip .tooltip-property {
+  margin-bottom: 4px;
+}
+
+.node-tooltip .tooltip-property ul {
+  padding-left: 16px;
+  margin: 0;
+}
+
+.node-tooltip .tooltip-property li {
+  font-size: 12px;
+  text-align: left;
+}
+
+/* Node wrapper */
+.node-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
 @media screen and (max-width: 1250px) {
   .workflow-editor-container .workflow-sidebar {
   width: 200px;
@@ -686,5 +911,4 @@
 }
 
 /* Touch Device Optimizations */
-
 

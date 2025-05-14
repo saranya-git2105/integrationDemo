@@ -998,6 +998,7 @@ const WorkflowEditor = forwardRef(
 
       // Get the original workflow data from localStorage if it exists
       const originalWorkflow = JSON.parse(localStorage.getItem("ModifyWorkFlowJson") || "{}");
+      console.log("originalWorkflow", originalWorkflow);
       const originalSteps = originalWorkflow.WorkFlowSteps || [];
 
       const graph = {};
@@ -1100,9 +1101,9 @@ const WorkflowEditor = forwardRef(
       const jsonOutput = {
         Id: originalWorkflow.Id || workflowForm?.Id || "",
         WorkFlowName: workflowForm?.WorkFlowName,
-        ModuleId: workflowForm?.ModuleId,
-        ProjectId: workflowForm?.ProjectId,
-        RDLCTypeId: workflowForm?.RDLCTypeId,
+        ModuleId: workflowForm?.ModuleId || originalWorkflow.ModuleId,
+        ProjectId: workflowForm?.ProjectId || originalWorkflow.ProjectId,
+        RDLCTypeId: workflowForm?.RDLCTypeId || originalWorkflow.RDLCTypeId,
         DateEffective: workflowForm?.DateEffective || originalWorkflow.DateEffective || new Date().toISOString(),
         CountryCode: originalWorkflow.CountryCode || "ind",
         CurrencyCode: originalWorkflow.CurrencyCode || "inr",
@@ -1555,7 +1556,7 @@ const WorkflowEditor = forwardRef(
                   onDragStart(e, label);
                 }}
               >
-                <span style={{ fontSize: "13px" }}>{label}</span>
+                <span>{label}</span>
                 <div
                   className={`node-type-shape ${shape === "circle" ? "circle" : shape === "diamond" ? "diamond" : ""}`}
                   style={{ background: color }}
@@ -1777,27 +1778,14 @@ const WorkflowEditor = forwardRef(
 
                 return (
                   <div
-                    key={`tooltip-${edge.id}`}
-                    className="edge-tooltip"
-                    style={{
-                      transform: `translate(-50%, -100%) translate(${edgeCenterX}px, ${edgeCenterY}px)`,
-                    }}
+                   
                   >
                     {edge.label && (
                       <div>
                         <strong>{edge.label}</strong>
                       </div>
                     )}
-                    {edge?.data?.shortPurposeForForward && (
-                      <div>
-                        <em>{edge.data.shortPurposeForForward}</em>
-                      </div>
-                    )}
-                    {edge?.data?.purposeForForward && (
-                      <div style={{ marginTop: "4px" }}>
-                        {edge.data.purposeForForward}
-                      </div>
-                    )}
+                   
                   </div>
                 );
               })}
