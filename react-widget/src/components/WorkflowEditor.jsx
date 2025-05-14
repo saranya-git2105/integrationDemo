@@ -130,8 +130,8 @@ const WorkflowEditor = forwardRef(
         if (!startNodeExists && actionType !== "view") {
           toast.warning("⚠️ Please drag and place a Start node first before saving or viewing the workflow.", {
             position: "top-right",
-            autoClose: 3000,
-            hideProgressBar: false,
+            autoClose: 500,
+            hideProgressBar: true,
             closeOnClick: true,
             pauseOnHover: true,
             draggable: true,
@@ -265,7 +265,7 @@ const WorkflowEditor = forwardRef(
         .then((data) => {
           if (data?.ReturnCode === 0 && Array.isArray(data.Data)) {
             const userOptions = data.Data.map((user) => ({
-              UserId: user.Id,
+              UserId: user.HRMSEmployeeId,
               UserName: user.Name,
             }));
             console.log("👥 Loaded Users:", userOptions);
@@ -319,8 +319,8 @@ const WorkflowEditor = forwardRef(
           if (currentNodes.length === 0) {
             toast.warning("⚠️ Please add at least one node to the workflow before viewing JSON.", {
               position: "top-right",
-              autoClose: 3000,
-              hideProgressBar: false,
+              autoClose: 500,
+              hideProgressBar: true,
               closeOnClick: true,
               pauseOnHover: true,
               draggable: true,
@@ -474,7 +474,7 @@ const WorkflowEditor = forwardRef(
         toast.warning("🔒 Canvas is locked. Unlock to make changes.", {
           position: "top-right",
           autoClose: 2000,
-          hideProgressBar: false,
+          hideProgressBar: true,
           closeOnClick: true,
           pauseOnHover: true,
           draggable: true,
@@ -499,10 +499,10 @@ const WorkflowEditor = forwardRef(
 
       // Check if trying to add Start/Stop node when one already exists
       if (nodeType === "Start" && nodes.some(n => n.data.nodeShape === "Start")) {
-        toast.error("⚠️ A Start node already exists in the workflow. Only one Start node is allowed.", {
+        toast.error("⚠️Cannot add multiple Start nodes.", {
           position: "top-right",
-          autoClose: 3000,
-          hideProgressBar: false,
+          autoClose: 500,
+          hideProgressBar: true,
           closeOnClick: true,
           pauseOnHover: true,
           draggable: true,
@@ -510,10 +510,10 @@ const WorkflowEditor = forwardRef(
         return;
       }
       if (nodeType === "Stop" && nodes.some(n => n.data.nodeShape === "Stop")) {
-        toast.error("⚠️ A Stop node already exists in the workflow. Only one Stop node is allowed.", {
+        toast.error("⚠️ Cannot add multiple Stop nodes.", {
           position: "top-right",
-          autoClose: 3000,
-          hideProgressBar: false,
+          autoClose: 500,
+          hideProgressBar: true,
           closeOnClick: true,
           pauseOnHover: true,
           draggable: true,
@@ -660,7 +660,7 @@ const WorkflowEditor = forwardRef(
 
           if (usersData?.ReturnCode === 0 && Array.isArray(usersData.Data)) {
             users = usersData.Data.map((user) => ({
-              UserId: user.Id,
+              UserId: user.HRMSEmployeeId,
               UserName: user.Name,
             }));
             console.log("📋 Formatted Users:", users);
@@ -1058,7 +1058,7 @@ const WorkflowEditor = forwardRef(
         toast.error("Still no Start node even after adding one automatically.", {
           position: "top-right",
           autoClose: 3000,
-          hideProgressBar: false,
+          hideProgressBar: true,
           closeOnClick: true,
           pauseOnHover: true,
           draggable: true,
@@ -1419,9 +1419,9 @@ const WorkflowEditor = forwardRef(
       }
       setContextMenu(null);
     };
-    const handleEdgeRightClick = (event, edge) => {
+    const handleEdgeClick = (event, edge) => {
       if (isLocked) return showLockedToast();
-      event.preventDefault();
+      event.stopPropagation(); // Prevent any bubbling
       setSelectedEdge({
         ...edge,
         data: {
@@ -1510,8 +1510,8 @@ const WorkflowEditor = forwardRef(
       <div className="workflow-editor-container">
         <ToastContainer
           position="top-right"
-          autoClose={3000}
-          hideProgressBar={false}
+          autoClose={500}
+          hideProgressBar={true}
           newestOnTop
           closeOnClick
           rtl={false}
@@ -1614,7 +1614,7 @@ const WorkflowEditor = forwardRef(
             onNodesChange={isLocked ? undefined : onNodesChange}
             onEdgesChange={isLocked ? undefined : onEdgesChange}
             onNodeClick={isLocked ? undefined : handleNodeClick}
-
+            onEdgeClick={isLocked ? undefined : handleEdgeClick}
             onSelectionChange={(e) => {
               const selected = [...(e?.nodes || []), ...(e?.edges || [])];
 
@@ -1641,8 +1641,8 @@ const WorkflowEditor = forwardRef(
                   if (params.source === "stop") {
                     toast.error("🚫 You cannot draw connections from the Stop node.", {
                       position: "top-right",
-                      autoClose: 3000,
-                      hideProgressBar: false,
+                      autoClose: 500,
+                      hideProgressBar: true,
                       closeOnClick: true,
                       pauseOnHover: true,
                       draggable: true,
@@ -1683,7 +1683,6 @@ const WorkflowEditor = forwardRef(
             }}
             onNodeContextMenu={isLocked ? undefined : handleNodeRightClick}
             onEdgeUpdate={onEdgeUpdate}
-            onEdgeContextMenu={isLocked ? undefined : handleEdgeRightClick}
             onEdgeMouseEnter={(_, edge) => setHoveredEdgeId(edge.id)}
             onEdgeMouseLeave={() => setHoveredEdgeId(null)}
             defaultViewport={{ x: 0, y: 0, zoom: 1 }}
@@ -1923,8 +1922,8 @@ const WorkflowEditor = forwardRef(
                 if (nodeShape === "Start" || nodeShape === "Stop") {
                   toast.error("🚫 Start and Stop nodes cannot be deleted.", {
                     position: "top-right",
-                    autoClose: 3000,
-                    hideProgressBar: false,
+                    autoClose: 500,
+                    hideProgressBar: true,
                     closeOnClick: true,
                     pauseOnHover: true,
                     draggable: true,
@@ -2042,30 +2041,66 @@ const WorkflowEditor = forwardRef(
                 isMulti
                 closeMenuOnSelect={false}
                 hideSelectedOptions={false}
-                options={stepActionsOptions.map((action) => ({
-                  label: action.ActionName,
-                  value: action.ActionName,
-                }))}
+                options={[
+                  { 
+                    label: "Select All", 
+                    value: "__SELECT_ALL__",
+                    isDisabled: false 
+                  },
+                  ...stepActionsOptions.map((action) => ({
+                    label: action.ActionName,
+                    value: action.ActionName,
+                  }))
+                ]}
                 value={
                   nodeProperties.stepActions?.map((actionName) => ({
                     label: actionName,
                     value: actionName,
                   })) || []
                 }
-                onChange={(selected) =>
-                  setNodeProperties((prev) => ({
-                    ...prev,
-                    stepActions: selected
-                      ? selected.map((item) => item.value)
-                      : [],
-                  }))
-                }
+                onChange={(selected) => {
+                  const hasSelectAll = selected?.some(item => item.value === "__SELECT_ALL__");
+                  const allActionNames = stepActionsOptions.map(action => action.ActionName);
+                  const currentActionNames = nodeProperties.stepActions || [];
+                  
+                  if (hasSelectAll) {
+                    // If "Select All" was clicked, check if all are selected
+                    const allSelected = allActionNames.every(name => 
+                      currentActionNames.includes(name)
+                    );
+                    
+                    if (allSelected) {
+                      // Deselect all
+                      setNodeProperties((prev) => ({
+                        ...prev,
+                        stepActions: [],
+                      }));
+                    } else {
+                      // Select all
+                      setNodeProperties((prev) => ({
+                        ...prev,
+                        stepActions: allActionNames,
+                      }));
+                    }
+                  } else {
+                    // Normal selection
+                    setNodeProperties((prev) => ({
+                      ...prev,
+                      stepActions: selected ? selected.map((item) => item.value) : [],
+                    }));
+                  }
+                }}
                 className="modal-select common-form-field-height"
                 classNamePrefix="modal-select"
                 components={{
                   MultiValue: ({ index, getValue, ...props }) => {
+                    // Don't show the "Select All" option in the selected values
+                    if (props.data.value === "__SELECT_ALL__") {
+                      return null;
+                    }
+                    
                     const maxToShow = 2;
-                    const values = getValue();
+                    const values = getValue().filter(v => v.value !== "__SELECT_ALL__");
                     const length = values.length;
                     
                     // Don't render anything for indices beyond maxToShow
@@ -2095,7 +2130,38 @@ const WorkflowEditor = forwardRef(
                     );
                   },
                   Option: ({ children, ...props }) => {
-                    const { isSelected, isFocused, innerRef, innerProps } = props;
+                    const { isSelected, isFocused, innerRef, innerProps, data } = props;
+                    
+                    // Special handling for "Select All" option
+                    if (data.value === "__SELECT_ALL__") {
+                      const allActionNames = stepActionsOptions.map(action => action.ActionName);
+                      const currentActionNames = nodeProperties.stepActions || [];
+                      const allSelected = allActionNames.every(name => 
+                        currentActionNames.includes(name)
+                      );
+                      
+                      return (
+                        <div
+                          ref={innerRef}
+                          {...innerProps}
+                          className="multi-value-option"
+                          style={{
+                            backgroundColor: isFocused ? '#f0f0f0' : 'white',
+                            fontWeight: 'bold',
+                            borderBottom: '1px solid #e5e5e5'
+                          }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={allSelected}
+                            onChange={() => null}
+                            className="multi-value-checkbox"
+                          />
+                          <div>{children}</div>
+                        </div>
+                      );
+                    }
+                    
                     return (
                       <div
                         ref={innerRef}
@@ -2125,30 +2191,66 @@ const WorkflowEditor = forwardRef(
                 isMulti
                 closeMenuOnSelect={false}
                 hideSelectedOptions={false}
-                options={stepUsersOptions.map((user) => ({
-                  label: user.UserName,
-                  value: user.UserName,
-                }))}
+                options={[
+                  { 
+                    label: "Select All", 
+                    value: "__SELECT_ALL_USERS__",
+                    isDisabled: false 
+                  },
+                  ...stepUsersOptions.map((user) => ({
+                    label: user.UserName,
+                    value: user.UserName,
+                  }))
+                ]}
                 value={
                   nodeProperties.UserNames?.map((userName) => ({
                     label: userName,
                     value: userName,
                   })) || []
                 }
-                onChange={(selected) =>
-                  setNodeProperties((prev) => ({
-                    ...prev,
-                    UserNames: selected
-                      ? selected.map((item) => item.value)
-                      : [],
-                  }))
-                }
+                onChange={(selected) => {
+                  const hasSelectAll = selected?.some(item => item.value === "__SELECT_ALL_USERS__");
+                  const allUserNames = stepUsersOptions.map(user => user.UserName);
+                  const currentUserNames = nodeProperties.UserNames || [];
+                  
+                  if (hasSelectAll) {
+                    // If "Select All" was clicked, check if all are selected
+                    const allSelected = allUserNames.every(name => 
+                      currentUserNames.includes(name)
+                    );
+                    
+                    if (allSelected) {
+                      // Deselect all
+                      setNodeProperties((prev) => ({
+                        ...prev,
+                        UserNames: [],
+                      }));
+                    } else {
+                      // Select all
+                      setNodeProperties((prev) => ({
+                        ...prev,
+                        UserNames: allUserNames,
+                      }));
+                    }
+                  } else {
+                    // Normal selection
+                    setNodeProperties((prev) => ({
+                      ...prev,
+                      UserNames: selected ? selected.map((item) => item.value) : [],
+                    }));
+                  }
+                }}
                 className="modal-select common-form-field-height"
                 classNamePrefix="modal-select"
                 components={{
                   MultiValue: ({ index, getValue, ...props }) => {
+                    // Don't show the "Select All" option in the selected values
+                    if (props.data.value === "__SELECT_ALL_USERS__") {
+                      return null;
+                    }
+                    
                     const maxToShow = 2;
-                    const values = getValue();
+                    const values = getValue().filter(v => v.value !== "__SELECT_ALL_USERS__");
                     const length = values.length;
                     
                     // Don't render anything for indices beyond maxToShow
@@ -2178,7 +2280,38 @@ const WorkflowEditor = forwardRef(
                     );
                   },
                   Option: ({ children, ...props }) => {
-                    const { isSelected, isFocused, innerRef, innerProps } = props;
+                    const { isSelected, isFocused, innerRef, innerProps, data } = props;
+                    
+                    // Special handling for "Select All" option
+                    if (data.value === "__SELECT_ALL_USERS__") {
+                      const allUserNames = stepUsersOptions.map(user => user.UserName);
+                      const currentUserNames = nodeProperties.UserNames || [];
+                      const allSelected = allUserNames.every(name => 
+                        currentUserNames.includes(name)
+                      );
+                      
+                      return (
+                        <div
+                          ref={innerRef}
+                          {...innerProps}
+                          className="multi-value-option"
+                          style={{
+                            backgroundColor: isFocused ? '#f0f0f0' : 'white',
+                            fontWeight: 'bold',
+                            borderBottom: '1px solid #e5e5e5'
+                          }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={allSelected}
+                            onChange={() => null}
+                            className="multi-value-checkbox"
+                          />
+                          <div>{children}</div>
+                        </div>
+                      );
+                    }
+                    
                     return (
                       <div
                         ref={innerRef}

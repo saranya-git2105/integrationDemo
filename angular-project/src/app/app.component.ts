@@ -69,28 +69,31 @@ const employeesResponse = {
   "Headers": null,
   "Data": [
     {
-      "Id": "156E562E-5F30-476E-BFDB-9C882832BF62",
-      "Name": "MadhuTest1 TEst",
-      "Code": null,
-      "Photo": "https://imgklm01.revalweb.com/uploads/erpdevuploads/revalerplocal/dynamicmodules/hrmsemp-307/bc0b6f73-2023-4b07-95f3-80d2b0b1644f/photo/screenshot20231019184022.png",
-      "Designation": "Manager",
-      "CompanyEmail": "aeLPqZjDuQkpzpqTHGxHjq5yG/w7ANoNsDQli4ekEb0hBTcplhHbnMgZ+i1vow=="
+      "Id": "760792A1-3302-4033-98A1-80C32FBB9BE4",
+      "HRMSEmployeeId": "B365011E-A1F4-40F5-A97D-EF9EDB8870FC",
+      "EmployeeID": "RI-1233",
+      "Name": "SrikarP",
+      "ReportingStartDate": null,
+      "ReportingEndDate": null,
+      "EmployeeManagerId": "AA2A8933-859A-4DA2-B15A-DF79FD862C59"
     },
     {
-      "Id": "A68473BC-BA8C-4A0E-B80D-2C5E7E1E5CF5",
-      "Name": "Pavan Kumar",
-      "Code": null,
-      "Photo": "https://imgklm01.revalweb.com/uploads/erpdevuploads/revalerplocal/dynamicmodules/hrmsemp-307/e8db1ad5-b58d-44c4-b586-b7ee27390d1f/photo/screenshot20240207192519.png",
-      "Designation": "Manager",
-      "CompanyEmail": "aeLPqZjDuQkpzpqTAWxVh7VyG/w7ANoNsDQli4ekPchNwJHmXciMGCNOt1PTvg=="
+      "Id": "B55B45A6-6EEB-4C72-896F-05A40FD8FF62",
+      "HRMSEmployeeId": "395D15E6-64C1-4613-9DF2-CF5FCB851040",
+      "EmployeeID": "RI-61",
+      "Name": "SwamyPillanagoila",
+      "ReportingStartDate": null,
+      "ReportingEndDate": null,
+      "EmployeeManagerId": "AA2A8933-859A-4DA2-B15A-DF79FD862C59"
     },
     {
-      "Id": "E58A854E-779C-413C-85EB-9DC891536F79",
-      "Name": "Kranthi Kumar",
-      "Code": null,
-      "Photo": "https://imgklm01.revalweb.com/uploads/erpdevuploads/revalerplocal/dynamicmodules/hrmsemp-307/53a62855-97a5-419a-9c23-c0848adf7d85/photo/rajini.jpg",
-      "Designation": "Manager",
-      "CompanyEmail": "aeLPqZjDuQkpzpqTGn9CiK9aANk/BMAfpTRym8aqbBSW4+g1cUGV1QC9GrGReKIX"
+      "Id": "56BE6586-A932-4EF9-8A2F-4BBBB8089CAA",
+      "HRMSEmployeeId": "4F119DD2-2508-4CD4-B9BE-713A0EBD52A5",
+      "EmployeeID": "RI-789",
+      "Name": "AkhilN",
+      "ReportingStartDate": null,
+      "ReportingEndDate": null,
+      "EmployeeManagerId": "AA2A8933-859A-4DA2-B15A-DF79FD862C59"
     }
   ]
 };
@@ -136,7 +139,7 @@ export class AppComponent implements AfterViewInit {
   }
   loadWorkflow() {
     console.log("🚨 Loading workflow from localStorage...");
-    
+
     // First ensure widget is initialized
     if (!(window as any).reactwidgetRef?.isInitialized) {
       console.log("Initializing widget first...");
@@ -155,7 +158,7 @@ export class AppComponent implements AfterViewInit {
     try {
       const parsedJson = JSON.parse(storedJson);
       const reactwidgetRef = (window as any).reactwidgetRef;
-      
+
       if (reactwidgetRef?.convertJsonToWorkflow) {
         console.log("Found convertJsonToWorkflow function, attempting to load workflow");
         reactwidgetRef.convertJsonToWorkflow(parsedJson);
@@ -230,7 +233,7 @@ export class AppComponent implements AfterViewInit {
     try {
       // Initialize the widget
       reactwidget.initialise();
-      
+
       // Wait for a short time to ensure widget is fully initialized
       setTimeout(() => {
         if (!widgetElement) {
@@ -273,11 +276,11 @@ export class AppComponent implements AfterViewInit {
             }
           }
         };
-        
-        console.log("✅ React widget initialized successfully with functions:", 
+
+        console.log("✅ React widget initialized successfully with functions:",
           Object.keys((window as any).reactwidgetRef));
       }, 1000);
-      
+
     } catch (error) {
       console.error("❌ Failed to initialize React widget:", error);
     }
@@ -286,7 +289,7 @@ export class AppComponent implements AfterViewInit {
   // New method to load workflow from API
   loadWorkflowFromApi(workflowId: string) {
     console.log("🚨 Loading workflow from API...");
-    
+
     // First ensure widget is initialized
     if (!(window as any).reactwidgetRef?.isInitialized) {
       console.log("Initializing widget first...");
@@ -301,19 +304,19 @@ export class AppComponent implements AfterViewInit {
         'Content-Type': 'application/json'
       }
     })
-    .then(response => response.json())
-    .then(workflowData => {
-      console.log("✅ Received workflow data:", workflowData);
-      
-      // Store the workflow data
-      localStorage.setItem('ModifyWorkflowJson', JSON.stringify(workflowData));
-      
-      // Load the workflow in the widget
-      this.loadWorkflow();
-    })
-    .catch(error => {
-      console.error("❌ Failed to fetch workflow:", error);
-    });
+      .then(response => response.json())
+      .then(workflowData => {
+        console.log("✅ Received workflow data:", workflowData);
+
+        // Store the workflow data
+        localStorage.setItem('ModifyWorkflowJson', JSON.stringify(workflowData));
+
+        // Load the workflow in the widget
+        this.loadWorkflow();
+      })
+      .catch(error => {
+        console.error("❌ Failed to fetch workflow:", error);
+      });
   }
 
   closeModal() {
