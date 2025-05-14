@@ -62,7 +62,8 @@ const actionsResponse = {
 };
 
 const employeesResponse = {
-  "Data": [
+  "Data": {
+    "ProjectMemberDetails": [
     {
       "Id": "760792A1-3302-4033-98A1-80C32FBB9BE4",
       "HRMSEmployeeId": "B365011E-A1F4-40F5-A97D-EF9EDB8870FC",
@@ -90,7 +91,8 @@ const employeesResponse = {
       "ReportingEndDate": null,
       "EmployeeManagerId": "AA2A8933-859A-4DA2-B15A-DF79FD862C59"
     }
-  ]
+    ]
+  }
 };
 
 @Component({
