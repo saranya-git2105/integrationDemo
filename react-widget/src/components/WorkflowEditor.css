@@ -744,6 +744,16 @@
   position: relative;
   display: inline-block;
 }
+.react-flow__node {
+  z-index: 1 !important;
+}
+
+.react-flow__node:hover {
+  z-index: 2 !important;
+}
+
+
+
 
 @media screen and (max-width: 1250px) {
   .workflow-editor-container .workflow-sidebar {
