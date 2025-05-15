@@ -28,7 +28,7 @@ const CustomSmoothEdge = ({
   const deltaY = targetY - sourceY;
   const angle = Math.atan2(deltaY, deltaX);
   const offsetX = Math.cos(angle) * 30;
-  const offsetY = Math.sin(angle) * 10; // move label up to prevent overlap with path
+  const offsetY = Math.sin(angle) * 10;
 
   return (
     <>
@@ -43,18 +43,14 @@ const CustomSmoothEdge = ({
       {label && (
       <EdgeLabelRenderer>
         <div
-        
-          title={data?.label}
           style={{
             position: 'absolute',
             transform: `translate(-50%, -50%) translate(${labelX + offsetX}px, ${labelY + offsetY}px)`,
             background: 'white',
-            border: '1px solid #ccc',
             padding: '4px 8px',
             borderRadius: 6,
             fontSize: 12,
-            whiteSpace: 'nowrap',
-            pointerEvents: 'all',
+            pointerEvents: 'none',
             boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
             zIndex: 1000,
           }}

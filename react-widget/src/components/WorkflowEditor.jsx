@@ -63,6 +63,7 @@ const WorkflowEditor = forwardRef(
     const [selectedEdge, setSelectedEdge] = useState(null);
     const [selectedNode, setSelectedNode] = useState(null);
     const [nodeProperties, setNodeProperties] = useState({});
+    
     const nodeTypes = useMemo(
       () => ({
         custom: (nodeProps) => (
@@ -1100,7 +1101,7 @@ const WorkflowEditor = forwardRef(
       // Build JSON
       const jsonOutput = {
         Id: originalWorkflow.Id || workflowForm?.Id || "",
-        WorkFlowName: workflowForm?.WorkFlowName,
+        WorkFlowName: workflowForm?.WorkFlowName || originalWorkflow.WorkFlowName,
         ModuleId: workflowForm?.ModuleId || originalWorkflow.ModuleId,
         ProjectId: workflowForm?.ProjectId || originalWorkflow.ProjectId,
         RDLCTypeId: workflowForm?.RDLCTypeId || originalWorkflow.RDLCTypeId,
@@ -1757,39 +1758,7 @@ const WorkflowEditor = forwardRef(
               </div>
             )}
           </ReactFlow>
-          <EdgeLabelRenderer>
-            {edges
-              .filter(
-                (edge) =>
-                  edge.id === hoveredEdgeId &&
-                  (edge.label ||
-                    edge.data?.shortPurposeForForward ||
-                    edge.data?.purposeForForward)
-              )
-              .map((edge) => {
-                const sourceNode = nodes.find((n) => n.id === edge.source);
-                const targetNode = nodes.find((n) => n.id === edge.target);
-                if (!sourceNode || !targetNode) return null;
-
-                const edgeCenterX =
-                  (sourceNode.position.x + targetNode.position.x) / 2 + 75;
-                const edgeCenterY =
-                  (sourceNode.position.y + targetNode.position.y) / 2 + 10;
-
-                return (
-                  <div
-                   
-                  >
-                    {edge.label && (
-                      <div>
-                        <strong>{edge.label}</strong>
-                      </div>
-                    )}
-                   
-                  </div>
-                );
-              })}
-          </EdgeLabelRenderer>
+         
         </div>
 
         {/* Context Menus */}

@@ -354,34 +354,19 @@
   100% { opacity: 0; }
 }
 
-/* Edge tooltip */
-.workflow-editor-container .edge-tooltip {
-  position: absolute;
-  background: #fefce8;
-  color: black;
-  padding: 6px 10px;
-  border-radius: 6px;
-  font-size: 12px;
-  white-space: pre-line;
-  max-width: 240px;
-  z-index: 999;
-  pointer-events: none;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-}
-
 /* Selection indicator */
 .workflow-editor-container .selection-indicator {
   position: absolute;
-  top: 10px;
+  top: 20px;
   left: 50%;
   transform: translateX(-50%);
-  background: #0f172a;
-  color: #fff;
-  padding: 6px 12px;
-  border-radius: 6px;
+  background: #fefce8;
+  color: black;
+  padding: 8px 16px;
+  border-radius: 8px;
   font-size: 14px;
-  z-index: 50;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+  z-index: 30;
 }
 .workflow-editor-container .flowchart-header{
   display: flex;
@@ -697,7 +682,7 @@
   min-width: 100px;
   max-width: 150px;
   box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-  z-index: 10001 !important;
+  z-index: 999999 !important;
   white-space: normal;
   text-align: left;
   opacity: 0.95;

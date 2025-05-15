@@ -88,7 +88,14 @@ const CustomNode = ({ data, onRename, onEdit, onDelete, isLocked }) => {
   };
 
   return (
-    <div className="node-wrapper">
+    <div 
+      className="node-wrapper"
+      style={{ 
+        position: 'relative',
+        zIndex: hovered ? 100000 : 1,
+        transform: 'translate(0, 0)' // Creates a new stacking context
+      }}
+    >
       {nodeShape === "Decision" ? (
         <div
           className={getNodeClassName()}
@@ -157,7 +164,15 @@ const CustomNode = ({ data, onRename, onEdit, onDelete, isLocked }) => {
         }
 
         return (
-          <div className={`node-tooltip ${tooltipClass}`}>
+          <div 
+            className={`node-tooltip ${tooltipClass}`} 
+            style={{ 
+              zIndex: 999999,
+              position: 'absolute',
+              pointerEvents: 'none', // Prevents tooltip from interfering with node interactions
+              transform: 'translate(0, 0)' // Creates a new stacking context
+            }}
+          >
             <strong className="tooltip-title">🔍 Properties</strong>
             {Object.entries(properties).map(([key, value]) => {
               if (!value || (Array.isArray(value) && value.length === 0)) return null;
