@@ -6,7 +6,7 @@ import {
   ArrowLeft,
   ArrowRight,
 } from "lucide-react";
-import "./workfloweditor.css";
+import "./WorkflowEditor.css";
 
 const propertyLabels = {
   stepName: "Step Name",
