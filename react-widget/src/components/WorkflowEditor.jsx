@@ -1375,10 +1375,21 @@ const WorkflowEditor = forwardRef(
             : n
         )
       );
+      
       setEdges((eds) => {
         const outgoing = eds.filter((e) => e.source === selectedNode.id);
-        const updated = eds.map((e) => {
+        return eds.map((e) => {
           if (e.source === selectedNode.id) {
+            // Keep the existing label if it's still in the StepActions list
+            const stepActions = nodeProperties.stepActions?.map(action => 
+              typeof action === 'string' ? action : action.name
+            ) || [];
+            
+            if (stepActions.includes(e.label)) {
+              return e; // Keep the existing edge unchanged
+            }
+            
+            // If the current label is not in StepActions, only then assign a new one
             const actionIndex = outgoing.findIndex((x) => x.id === e.id);
             const newLabel = nodeProperties.stepActions?.[actionIndex]?.name || 
                            (typeof nodeProperties.stepActions?.[actionIndex] === 'string' ? 
@@ -1394,7 +1405,6 @@ const WorkflowEditor = forwardRef(
           }
           return e;
         });
-        return updated;
       });
       setSelectedNode(null);
       setModalIsOpen(false);
