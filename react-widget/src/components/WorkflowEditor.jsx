@@ -1987,7 +1987,7 @@ const WorkflowEditor = forwardRef(
           parentSelector={() => document.querySelector(".container")}
           className="modal-content node-properties-modal"
         >
-          <h2 className="modal-header">Node Properties</h2>
+          <h2 className="modal-header">Step Properties</h2>
 
           <div className="modal-content-container">
             {/* Description Field */}
