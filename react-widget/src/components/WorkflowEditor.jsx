@@ -109,7 +109,7 @@ const WorkflowEditor = forwardRef(
     const [isDraggingEdgeMenu, setIsDraggingEdgeMenu] = useState(false);
     const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
     const [workflowForm, setWorkflowForm] = useState(null);
-    const [saveButtonColor, setSaveButtonColor] = useState();
+    const [saveButtonColor, setSaveButtonColor] = useState('#4b49ac');
     const sidebarNodeTypes = useMemo(
       () =>
         [
