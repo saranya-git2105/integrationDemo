@@ -109,6 +109,7 @@ const WorkflowEditor = forwardRef(
     const [isDraggingEdgeMenu, setIsDraggingEdgeMenu] = useState(false);
     const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
     const [workflowForm, setWorkflowForm] = useState(null);
+    const [saveButtonColor, setSaveButtonColor] = useState();
     const sidebarNodeTypes = useMemo(
       () =>
         [
@@ -218,6 +219,7 @@ const WorkflowEditor = forwardRef(
       getActions = "",
       getUsers = "",
       getWorkflows = "",
+      getSaveButtonColour = "",
       saveWorkflow = "",
       loadWorkflow = "",
     } = apiUrls;
@@ -282,6 +284,17 @@ const WorkflowEditor = forwardRef(
         });
     }, [getUsers, apiUrls?.headers]);
 
+    useEffect(() => {
+      if (apiUrls.getSaveButtonColour) {
+        Promise.resolve(apiUrls.getSaveButtonColour())
+          .then((color) => {
+            setSaveButtonColor(color);
+          })
+          .catch((err) => {
+            console.error("Error getting save button color:", err);
+          });
+      }
+    }, [apiUrls.getSaveButtonColour]);
 
     useEffect(() => {
       if (selectedNode) {
@@ -2312,6 +2325,7 @@ const WorkflowEditor = forwardRef(
               <button
                 onClick={saveNodeProperties}
                 className="modal-button modal-button-save common-form-field-height"
+                style={{ backgroundColor: saveButtonColor }}
               >
                 Save
               </button>

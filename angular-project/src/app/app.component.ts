@@ -196,6 +196,7 @@ export class AppComponent implements AfterViewInit {
     reactwidget.setApiUrls({
       getActions: () => Promise.resolve(actionsResponse),
       getUsers: () => Promise.resolve(employeesResponse),
+      getSaveButtonColour: () => Promise.resolve('#4b49ac'),
       getWorkflows: 'https://app.jassi.me/workflows',
       saveWorkflow: 'https://app.jassi.me/seed',
       headers: {

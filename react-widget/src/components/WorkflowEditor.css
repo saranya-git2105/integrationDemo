@@ -258,9 +258,9 @@
 }
 
 .node-properties-modal .modal-button-save {
-    border: 1px solid #00d25b;
+    border: 1px solid #bcbcbc;
     color: #fff;
-    background-color: #00d25b;
+  
 }
 
 .node-properties-modal .modal-button-cancel {
