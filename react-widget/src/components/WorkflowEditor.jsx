@@ -28,6 +28,7 @@ import CustomNode from "./CustomNode";
 import CustomSmoothEdge from "./CustomSmoothEdge";
 import { generate_styled_edges, layoutTopDownCustom } from "../utils/layout";
 import Select from "react-select";
+import logger from "../utils/logger";
 import {
   FiEye,
   FiDownload,
@@ -63,7 +64,7 @@ const WorkflowEditor = forwardRef(
     const [selectedEdge, setSelectedEdge] = useState(null);
     const [selectedNode, setSelectedNode] = useState(null);
     const [nodeProperties, setNodeProperties] = useState({});
-    
+    const [saveButtonColor, setSaveButtonColor] = useState('#4b49ac');
     const nodeTypes = useMemo(
       () => ({
         custom: (nodeProps) => (
@@ -109,22 +110,269 @@ const WorkflowEditor = forwardRef(
     const [isDraggingEdgeMenu, setIsDraggingEdgeMenu] = useState(false);
     const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
     const [workflowForm, setWorkflowForm] = useState(null);
-    const [saveButtonColor, setSaveButtonColor] = useState('#4b49ac');
     const sidebarNodeTypes = useMemo(
       () =>
         [
           { label: "Start", color: "#9fda7c", shape: "circle" },
-
           { label: "Step", color: "#82d6f7", shape: "rect" },
           { label: "Stop", color: "#FFB7B4", shape: "circle" },
-          //{ label: "Decision", color: "#B388EB", shape: "diamond" },
         ].filter(({ label }) => config?.nodeTypes?.[label] !== false),
       [config]
     );
 
+    const [nodeCount, setNodeCount] = useState(2); // Add this state for node counter
+    const [drawerOpen, setDrawerOpen] = useState(false);
+    const [drawerNode, setDrawerNode] = useState(null);
+    const [editMode, setEditMode] = useState(false);
+    const [drawerNodeProperties, setDrawerNodeProperties] = useState({});
+
+    // Add template workflows
+    const templateWorkflows = useMemo(
+      () => [
+        {
+          label: "2-Step Template",
+          description: "Start → Step → Step → Stop",
+          template: {
+            nodes: [
+              {
+                id: "start",
+                type: "custom",
+                position: { x: 100, y: 100 },
+                data: { label: "Start", nodeShape: "Start" }
+              },
+              {
+                id: "step1",
+                type: "custom",
+                position: { x: 87.81411960132891, y: 206.41362126245843 },
+                data: { label: "Step 1", nodeShape: "Step" }
+              },
+              {
+                id: "step2",
+                type: "custom",
+                position: { x: 134.63355481727575, y: 317.3167774086379 },
+                data: { label: "Step 2", nodeShape: "Step" }
+              },
+              {
+                id: "stop",
+                type: "custom",
+                position: { x: 192.356146179402, y: 418.9843101291086 },
+                data: { label: "Stop", nodeShape: "Stop" }
+              }
+            ],
+            edges: [
+              {
+                id: "start-step1",
+                source: "start",
+                target: "step1",
+                sourceHandle: "Start-bottom-source",
+                targetHandle: "Step-top-target",
+                type: "straight",
+                markerEnd: { type: MarkerType.ArrowClosed },
+                style: { strokeWidth: 2, stroke: "#333" }
+              },
+              {
+                id: "step1-step2",
+                source: "step1",
+                target: "step2",
+                sourceHandle: "Step-bottom-source",
+                targetHandle: "Step-top-target",
+                type: "straight",
+                markerEnd: { type: MarkerType.ArrowClosed },
+                style: { strokeWidth: 2, stroke: "#333" }
+              },
+              {
+                id: "step2-stop",
+                source: "step2",
+                target: "stop",
+                sourceHandle: "Step-bottom-source",
+                targetHandle: "Stop-top-target",
+                type: "straight",
+                markerEnd: { type: MarkerType.ArrowClosed },
+                style: { strokeWidth: 2, stroke: "#333" }
+              }
+            ]
+          }
+        },
+        {
+          label: "3-Step Template",
+          description: "Start → Step → Step → Step → Stop",
+          template: {
+            nodes: [
+              {
+                id: "start",
+                type: "custom",
+                position: { x: 100, y: 100 },
+                data: { label: "Start", nodeShape: "Start" }
+              },
+              {
+                id: "step1",
+                type: "custom",
+                position: { x: 87.81411960132891, y: 206.41362126245843 },
+                data: { label: "Step 1", nodeShape: "Step" }
+              },
+              {
+                id: "step2",
+                type: "custom",
+                position: { x: 134.63355481727575, y: 317.3167774086379 },
+                data: { label: "Step 2", nodeShape: "Step" }
+              },
+              {
+                id: "step3",
+                type: "custom",
+                position: { x: 192.356146179402, y: 418.9843101291086 },
+                data: { label: "Step 3", nodeShape: "Step" }
+              },
+              {
+                id: "stop",
+                type: "custom",
+                position: { x: 250, y: 520 },
+                data: { label: "Stop", nodeShape: "Stop" }
+              }
+            ],
+            edges: [
+              {
+                id: "start-step1",
+                source: "start",
+                target: "step1",
+                sourceHandle: "Start-bottom-source",
+                targetHandle: "Step-top-target",
+                type: "straight",
+                markerEnd: { type: MarkerType.ArrowClosed },
+                style: { strokeWidth: 2, stroke: "#333" }
+              },
+              {
+                id: "step1-step2",
+                source: "step1",
+                target: "step2",
+                sourceHandle: "Step-bottom-source",
+                targetHandle: "Step-top-target",
+                type: "straight",
+                markerEnd: { type: MarkerType.ArrowClosed },
+                style: { strokeWidth: 2, stroke: "#333" }
+              },
+              {
+                id: "step2-step3",
+                source: "step2",
+                target: "step3",
+                sourceHandle: "Step-bottom-source",
+                targetHandle: "Step-top-target",
+                type: "straight",
+                markerEnd: { type: MarkerType.ArrowClosed },
+                style: { strokeWidth: 2, stroke: "#333" }
+              },
+              {
+                id: "step3-stop",
+                source: "step3",
+                target: "stop",
+                sourceHandle: "Step-bottom-source",
+                targetHandle: "Stop-top-target",
+                type: "straight",
+                markerEnd: { type: MarkerType.ArrowClosed },
+                style: { strokeWidth: 2, stroke: "#333" }
+              }
+            ]
+          }
+        }
+      ],
+      []
+    );
+
+    // Add this function to generate dynamic template
+    const generateDynamicTemplate = (count) => {
+      const nodes = [];
+      const edges = [];
+      const baseY = 100;
+      const yIncrement = 110;
+
+      // Add Start node
+      nodes.push({
+        id: "start",
+        type: "custom",
+        position: { x: 100, y: baseY },
+        data: { label: "Start", nodeShape: "Start", properties: { StepName: "Start" } }
+      });
+
+      // Add Step nodes
+      for (let i = 0; i < count; i++) {
+        const yPos = baseY + (i + 1) * yIncrement;
+        const xPos = 87.81411960132891 + (i * 46.81943521594684);
+
+        nodes.push({
+          id: `step${i + 1}`,
+          type: "custom",
+          position: { x: xPos, y: yPos },
+          data: {
+            label: `Step ${i + 1}`,
+            nodeShape: "Step",
+            properties: { StepName: `Step ${i + 1}` }
+          }
+        });
+
+        // Add edge from previous node
+        const sourceId = i === 0 ? "start" : `step${i}`;
+        const sourceHandle = i === 0 ? "Start-bottom-source" : "Step-bottom-source";
+
+        edges.push({
+          id: `${sourceId}-step${i + 1}`,
+          source: sourceId,
+          target: `step${i + 1}`,
+          sourceHandle,
+          targetHandle: "Step-top-target",
+          type: "straight",
+          markerEnd: { type: MarkerType.ArrowClosed },
+          style: { strokeWidth: 2, stroke: "#333" }
+        });
+      }
+
+      // Add Stop node
+      const stopY = baseY + (count + 1) * yIncrement;
+      const stopX = 192.356146179402 + ((count - 1) * 46.81943521594684);
+
+      nodes.push({
+        id: "stop",
+        type: "custom",
+        position: { x: stopX, y: stopY },
+        data: { label: "Stop", nodeShape: "Stop", properties: { StepName: "Stop" } }
+      });
+
+      // Add final edge to Stop
+      edges.push({
+        id: `step${count}-stop`,
+        source: `step${count}`,
+        target: "stop",
+        sourceHandle: "Step-bottom-source",
+        targetHandle: "Stop-top-target",
+        type: "straight",
+        markerEnd: { type: MarkerType.ArrowClosed },
+        style: { strokeWidth: 2, stroke: "#333" }
+      });
+
+      return { nodes, edges };
+    };
+
+    // Add this function to handle dynamic template loading
+    const loadDynamicTemplate = () => {
+      if (isLocked) return showLockedToast();
+
+      const template = generateDynamicTemplate(nodeCount);
+
+      // Clear existing workflow
+      setNodes([]);
+      setEdges([]);
+
+      // Add template nodes and edges
+      setNodes(template.nodes);
+      setEdges(template.edges);
+
+      // Center the view
+      setTimeout(() => {
+        reactFlowInstance.fitView();
+      }, 100);
+    };
+
     const handleActionWithMeta = useCallback(
       (actionType) => {
-        console.log("NODES:", nodes);
+        logger.debug("NODES:", nodes);
         const startNodeExists = nodes.some(
           (node) => node.data?.nodeShape === "Start"
         );
@@ -218,10 +466,6 @@ const WorkflowEditor = forwardRef(
     const {
       getActions = "",
       getUsers = "",
-      getWorkflows = "",
-      getSaveButtonColour = "",
-      saveWorkflow = "",
-      loadWorkflow = "",
     } = apiUrls;
     useEffect(() => {
       const storedForm = localStorage.getItem("workflowForm");
@@ -229,9 +473,9 @@ const WorkflowEditor = forwardRef(
         try {
           const parsedForm = JSON.parse(storedForm);
           setWorkflowForm(parsedForm);
-          console.log("✅ Loaded form data from localStorage:", parsedForm);
+          logger.info("✅ Loaded form data from localStorage:", parsedForm);
         } catch (err) {
-          console.error("🚨 Error parsing form data:", err);
+          logger.error("🚨 Error parsing form data:", err);
         }
       }
     }, []);
@@ -242,48 +486,25 @@ const WorkflowEditor = forwardRef(
       // Handle getActions as a function
       Promise.resolve(getActions())
         .then((data) => {
-          console.log("📥 Raw Actions Response:", data);
+          logger.info("📥 Raw Actions Response:", data);
           if (data?.ReturnCode === 0 && Array.isArray(data.Data)) {
             const formattedActions = data.Data.map((action) => ({
               ActionId: action.Id,
               ActionName: action.Name,
               ActionCode: action.Code,
             }));
-            console.log("📋 Formatted Actions:", formattedActions);
+            logger.info("📋 Formatted Actions:", formattedActions);
             setStepActionsOptions(formattedActions);
           } else {
-            console.warn("⚠️ No action data received or invalid format:", data);
+            logger.warn("⚠️ No action data received or invalid format:", data);
             setStepActionsOptions([]);
           }
         })
         .catch((err) => {
-          console.error("❌ Failed to get actions:", err);
+          logger.error("❌ Failed to get actions:", err);
           setStepActionsOptions([]);
         });
     }, [getActions]);
-
-    useEffect(() => {
-      if (!getUsers) return;
-      Promise.resolve(getUsers())
-        .then((data) => {
-          if (Array.isArray(data.Data.ProjectMemberDetails)) {
-            const userOptions = data.Data.ProjectMemberDetails.map((user) => ({
-              UserId: user.HRMSEmployeeId,
-              UserName: user.Name,
-            }));
-            console.log("👥 Loaded Users:", userOptions);
-            setStepUsersOptions(userOptions);
-          } else {
-            console.warn("No user data received");
-            setStepUsersOptions([]);
-          }
-        })
-        .catch((err) => {
-          console.error("Failed to fetch users", err);
-          setStepUsersOptions([]);
-        });
-    }, [getUsers, apiUrls?.headers]);
-
     useEffect(() => {
       if (apiUrls.getSaveButtonColour) {
         Promise.resolve(apiUrls.getSaveButtonColour())
@@ -295,6 +516,28 @@ const WorkflowEditor = forwardRef(
           });
       }
     }, [apiUrls.getSaveButtonColour]);
+    useEffect(() => {
+      if (!getUsers) return;
+      Promise.resolve(getUsers())
+        .then((data) => {
+          if (Array.isArray(data.Data.ProjectMemberDetails)) {
+            const userOptions = data.Data.ProjectMemberDetails.map((user) => ({
+              UserId: user.HRMSEmployeeId,
+              UserName: user.Name,
+            }));
+            logger.info("👥 Loaded Step Users:", userOptions);
+            setStepUsersOptions(userOptions);
+          } else {
+            logger.warn("No user data received");
+            setStepUsersOptions([]);
+          }
+        })
+        .catch((err) => {
+          logger.error("❌ Failed to fetch step users", err);
+          setStepUsersOptions([]);
+        });
+    }, [getUsers, apiUrls?.headers]);
+
 
     useEffect(() => {
       if (selectedNode) {
@@ -329,7 +572,7 @@ const WorkflowEditor = forwardRef(
         viewJson: () => {
           const currentNodes = getNodes();
           const currentEdges = getEdges();
-          console.log("Current nodes from Angular call:", currentNodes);
+          logger.info("Current nodes from Angular call:", currentNodes);
           if (currentNodes.length === 0) {
             toast.warning("⚠️ Please add at least one node to the workflow before viewing JSON.", {
               position: "top-right",
@@ -513,7 +756,7 @@ const WorkflowEditor = forwardRef(
 
       // Check if trying to add Start/Stop node when one already exists
       if (nodeType === "Start" && nodes.some(n => n.data.nodeShape === "Start")) {
-        toast.error("⚠️Cannot add multiple Start nodes.", {
+        toast.error("Cannot add multiple Start nodes.", {
           position: "top-right",
           autoClose: 500,
           hideProgressBar: true,
@@ -524,7 +767,7 @@ const WorkflowEditor = forwardRef(
         return;
       }
       if (nodeType === "Stop" && nodes.some(n => n.data.nodeShape === "Stop")) {
-        toast.error("⚠️ Cannot add multiple Stop nodes.", {
+        toast.error("Cannot add multiple Stop nodes.", {
           position: "top-right",
           autoClose: 500,
           hideProgressBar: true,
@@ -605,37 +848,37 @@ const WorkflowEditor = forwardRef(
       [allWorkflows]
     );
     const convertJsonToWorkflow = async (data) => {
-      console.log("📥 Incoming JSON Data:", JSON.stringify(data, null, 2));
+      logger.info("📥 Incoming JSON Data:", JSON.stringify(data, null, 2));
       let actions = stepActionsOptions;
       let users = stepUsersOptions;
 
       // Validate Start/Stop nodes in incoming data
       const workflowSteps = data?.WorkFlowSteps || [];
-      const startNodes = workflowSteps.filter(step => 
-        step.StepName?.toLowerCase() === "start" || 
+      const startNodes = workflowSteps.filter(step =>
+        step.StepName?.toLowerCase() === "start" ||
         step.Properties?.NodeShape === "Start"
       );
-      const stopNodes = workflowSteps.filter(step => 
-        step.StepName?.toLowerCase() === "stop" || 
+      const stopNodes = workflowSteps.filter(step =>
+        step.StepName?.toLowerCase() === "stop" ||
         step.StepName?.toLowerCase() === "completed" ||
         step.Properties?.NodeShape === "Stop"
       );
 
       if (startNodes.length > 1) {
-        console.warn("⚠️ Multiple Start nodes found in workflow data. Using only the first one.");
+        logger.warn("⚠️ Multiple Start nodes found in workflow data. Using only the first one.");
         // Keep only the first Start node
-        const firstStartIndex = workflowSteps.findIndex(step => 
-          step.StepName?.toLowerCase() === "start" || 
+        const firstStartIndex = workflowSteps.findIndex(step =>
+          step.StepName?.toLowerCase() === "start" ||
           step.Properties?.NodeShape === "Start"
         );
         workflowSteps.splice(firstStartIndex + 1, startNodes.length - 1);
       }
 
       if (stopNodes.length > 1) {
-        console.warn("⚠️ Multiple Stop nodes found in workflow data. Using only the first one.");
+        logger.warn("⚠️ Multiple Stop nodes found in workflow data. Using only the first one.");
         // Keep only the first Stop node
-        const firstStopIndex = workflowSteps.findIndex(step => 
-          step.StepName?.toLowerCase() === "stop" || 
+        const firstStopIndex = workflowSteps.findIndex(step =>
+          step.StepName?.toLowerCase() === "stop" ||
           step.StepName?.toLowerCase() === "completed" ||
           step.Properties?.NodeShape === "Stop"
         );
@@ -643,10 +886,10 @@ const WorkflowEditor = forwardRef(
       }
 
       if (!actions.length) {
-        console.log("⏳ Loading actions...");
+        logger.info("⏳ Loading actions...");
         try {
           const actionsData = await Promise.resolve(getActions());
-          console.log("📥 Raw Actions Response:", actionsData);
+          logger.info("📥 Raw Actions Response:", actionsData);
 
           if (actionsData?.ReturnCode === 0 && Array.isArray(actionsData.Data)) {
             actions = actionsData.Data.map((action) => ({
@@ -654,60 +897,60 @@ const WorkflowEditor = forwardRef(
               ActionName: action.Name,
               ActionCode: action.Code,
             }));
-            console.log("📋 Formatted Actions:", actions);
+            logger.info("📋 Formatted Actions:", actions);
             setStepActionsOptions(actions);
           } else {
-            console.warn("⚠️ Invalid actions data format:", actionsData);
+            logger.warn("⚠️ Invalid actions data format:", actionsData);
             return;
           }
         } catch (err) {
-          console.error("❌ Failed to load actions:", err);
+          logger.error("❌ Failed to load actions:", err);
           return;
         }
       }
 
       if (!users.length) {
-        console.log("⏳ Loading users...");
+        logger.info("⏳ Loading users...");
         try {
           const usersData = await Promise.resolve(getUsers());
-          console.log("📥 Raw Users Response:", usersData);
+          logger.info("📥 Raw Step Users Response:", usersData);
 
           if (Array.isArray(usersData.Data.ProjectMemberDetails)) {
             users = usersData.Data.ProjectMemberDetails.map((user) => ({
               UserId: user.HRMSEmployeeId,
               UserName: user.Name,
             }));
-            console.log("📋 Formatted Users:", users);
+            logger.info("📋 Formatted Step Users:", users);
             setStepUsersOptions(users);
           } else {
-            console.warn("⚠️ Invalid users data format:", usersData);
+            logger.warn("⚠️ Invalid users data format:", usersData);
             return;
           }
         } catch (err) {
-          console.error("❌ Failed to load users:", err);
+          logger.error("❌ Failed to load step users:", err);
           return;
         }
       }
 
       // Verify both actions and users are loaded
       if (!actions.length || !users.length) {
-        console.error("❌ Actions or users not loaded, cannot proceed with workflow conversion");
+        logger.error("❌ Actions or step users not loaded, cannot proceed with workflow conversion");
         return;
       }
 
       if (!workflowSteps.length) {
-        console.warn("⚠️ No workflow steps found in the data");
+        logger.warn("⚠️ No workflow steps found in the data");
         return;
       }
 
       // Helper function to get action name from ID
       const getActionNameFromId = (actionId) => {
         if (!actionId) {
-          console.warn("⚠️ No action ID provided");
+          logger.warn("⚠️ No action ID provided");
           return "";
         }
 
-        console.log("🔍 Looking up action:", {
+        logger.info("🔍 Looking up action:", {
           actionId,
           availableActions: actions,
           actionCount: actions.length
@@ -715,29 +958,29 @@ const WorkflowEditor = forwardRef(
 
         const foundAction = actions.find(a => a.ActionId === actionId);
         if (foundAction) {
-          console.log("✅ Found action:", foundAction);
+          logger.info("✅ Found action:", foundAction);
           return foundAction.ActionName;
         }
 
         // Try to find by ActionCode if ActionId doesn't match
         const foundByCode = actions.find(a => a.ActionCode === actionId);
         if (foundByCode) {
-          console.log("✅ Found action by code:", foundByCode);
+          logger.info("✅ Found action by code:", foundByCode);
           return foundByCode.ActionName;
         }
 
-        console.warn("⚠️ Action not found:", actionId);
+        logger.warn("⚠️ Action not found:", actionId);
         return actionId;
       };
 
       // Helper function to get user name from ID
       const getUserNameFromId = (userId) => {
         if (!userId) {
-          console.warn("⚠️ No user ID provided");
+          logger.warn("⚠️ No user ID provided");
           return "";
         }
 
-        console.log("🔍 Looking up user:", {
+        logger.info("🔍 Looking up user:", {
           userId,
           availableUsers: users,
           userCount: users.length
@@ -745,11 +988,11 @@ const WorkflowEditor = forwardRef(
 
         const foundUser = users.find(u => u.UserId === userId);
         if (foundUser) {
-          console.log("✅ Found user:", foundUser);
+          logger.info("✅ Found user:", foundUser);
           return foundUser.UserName;
         }
 
-        console.warn("⚠️ User not found:", userId);
+        logger.warn("⚠️ User not found:", userId);
         return userId;
       };
 
@@ -791,7 +1034,7 @@ const WorkflowEditor = forwardRef(
           getUserNameFromId(user.UserId)
         ) || [];
 
-        console.log(`\n🏗️ Creating Node:`, {
+        logger.info(`\n🏗️ Creating Node:`, {
           id: stepCode,
           label: isStop ? "Stop" : step.StepName || stepCode,
           nodeShape,
@@ -829,7 +1072,7 @@ const WorkflowEditor = forwardRef(
 
         if (!sourceNode) return;
 
-        console.log(`\n🔄 Processing Transitions for Step ${sourceId}:`, {
+        logger.info(`\n🔄 Processing Transitions for Step ${sourceId}:`, {
           transitions: step.WorkFlowStepTransition,
           sourceNode: sourceNode.data.label
         });
@@ -847,7 +1090,7 @@ const WorkflowEditor = forwardRef(
 
             const actionName = getActionNameFromId(actionId);
 
-            console.log(`\n🔗 Creating Edge:`, {
+            logger.info(`\n🔗 Creating Edge:`, {
               source: sourceId,
               target: targetId,
               fromHandle: transition.FromHandleId || transition.sourceHandle,
@@ -886,7 +1129,7 @@ const WorkflowEditor = forwardRef(
             });
           });
         } else {
-          console.log(`\n🔗 Creating Default Edge for Step ${sourceId}`);
+          logger.info(`\n🔗 Creating Default Edge for Step ${sourceId}`);
 
           const stopNodeId = `${sourceId}_STOP`;
           const stopNode = newNodes.find(n => n.id === stopNodeId);
@@ -918,8 +1161,8 @@ const WorkflowEditor = forwardRef(
       });
 
       // Log final nodes and edges
-      console.log("\n📊 Final Nodes:", JSON.stringify(newNodes, null, 2));
-      console.log("\n🔗 Final Edges:", JSON.stringify(newEdges, null, 2));
+      logger.info("\n📊 Final Nodes:", JSON.stringify(newNodes, null, 2));
+      logger.info("\n🔗 Final Edges:", JSON.stringify(newEdges, null, 2));
 
       // Step 3: Add Start node if not found
       const hasStart = newNodes.some((n) => n.data.nodeShape === "Start");
@@ -1012,7 +1255,7 @@ const WorkflowEditor = forwardRef(
 
       // Get the original workflow data from localStorage if it exists
       const originalWorkflow = JSON.parse(localStorage.getItem("ModifyWorkFlowJson") || "{}");
-      console.log("originalWorkflow", originalWorkflow);
+      logger.info("originalWorkflow", originalWorkflow);
       const originalSteps = originalWorkflow.WorkFlowSteps || [];
 
       const graph = {};
@@ -1069,7 +1312,7 @@ const WorkflowEditor = forwardRef(
       }
 
       if (!startNode) {
-        console.error("Start node is STILL undefined — nodesCopy:", nodesCopy);
+        logger.error("Start node is STILL undefined — nodesCopy:", nodesCopy);
         toast.error("Still no Start node even after adding one automatically.", {
           position: "top-right",
           autoClose: 3000,
@@ -1125,7 +1368,7 @@ const WorkflowEditor = forwardRef(
         WorkFlowSteps: sortedNodes.map((node) => {
           const props = node.data.properties || {};
           const outgoingEdges = edgesCopy.filter((e) => e.source === node.id);
-          
+
           // Use existing StepCode or generate new one
           const stepCode = props.StepCode || "step" + stepCodeMap[node.id];
 
@@ -1143,12 +1386,12 @@ const WorkflowEditor = forwardRef(
               const action = resolveAction(edge.label);
               const targetNode = nodesCopy.find(n => n.id === edge.target);
               const targetStepCode = targetNode?.data?.properties?.StepCode || "step" + stepCodeMap[edge.target];
-              
+
               // Find matching original transition
-              const originalTransition = originalStep?.WorkFlowStepTransition?.find(t => 
+              const originalTransition = originalStep?.WorkFlowStepTransition?.find(t =>
                 t.NextStepCode === targetStepCode
               );
-              
+
               return {
                 Id: originalTransition?.Id || "",
                 ActionId: action?.ActionId || "",
@@ -1164,10 +1407,10 @@ const WorkflowEditor = forwardRef(
               (a) => a.ActionName === actionName
             );
             // Find matching original action
-            const originalAction = originalStep?.WorkFlowStepAction?.find(a => 
+            const originalAction = originalStep?.WorkFlowStepAction?.find(a =>
               a.ActionId === found?.ActionId
             );
-            
+
             return {
               Id: originalAction?.Id || "",
               ActionId: found?.ActionId || actionName || "Unknown",
@@ -1180,10 +1423,10 @@ const WorkflowEditor = forwardRef(
               (u) => u.UserName === userName
             );
             // Find matching original user
-            const originalUser = originalStep?.WorkFlowStepUser?.find(u => 
+            const originalUser = originalStep?.WorkFlowStepUser?.find(u =>
               u.UserId === found?.UserId
             );
-            
+
             return {
               Id: originalUser?.Id || "",
               UserId: found?.UserId || userName || "Unknown",
@@ -1210,7 +1453,7 @@ const WorkflowEditor = forwardRef(
         }),
       };
 
-      console.log("✅ Generated JSON:", jsonOutput);
+      logger.info("✅ Generated JSON:", jsonOutput);
       return jsonOutput;
     };
 
@@ -1228,9 +1471,9 @@ const WorkflowEditor = forwardRef(
       const jsonoutput = generateJson(false);
       const jsonString = JSON.stringify(jsonoutput, null, 2);
       localStorage.setItem("workflowJson", jsonString);
-      console.log("JSON saved to localStorage:", jsonString);
+      logger.info("JSON saved to localStorage:", jsonString);
       const json = localStorage.getItem("workflowJson");
-      console.log("JSON from localStorage:", json);
+      logger.info("JSON from localStorage:", json);
     };
     useImperativeHandle(ref, () => ({
       triggerViewJson: () => {
@@ -1282,145 +1525,50 @@ const WorkflowEditor = forwardRef(
       setNodeMenuPosition({ x: event.clientX, y: event.clientY });
     };
 
-    // Function to select node and show properties
+    // Function to select node and show properties (open drawer)
     const handleNodeClick = (event, node) => {
       if (isLocked) return showLockedToast();
       if (node.data.nodeShape === "Start" || node.data.nodeShape === "Stop") {
         return;
       }
-
-      setSelectedNode(node);
-
-      const props = node.data.properties || {};
-      const originalWorkflow = JSON.parse(localStorage.getItem("ModifyWorkFlowJson") || "{}");
-      
-      // Get the step code from the node's data
-      const stepCode = props.StepCode || `step${nodes.findIndex(n => n.id === node.id)}`;
-      
-      // Find the original step by matching the StepCode
-      const originalStep = originalWorkflow.WorkFlowSteps?.find(step => 
-        step.StepCode === stepCode
-      );
-
-      // Normalize keys for modal with preserved IDs
-      const normalizedProps = {
-        stepName: props.StepName || node.data.label,
-        stepActions: Array.isArray(props.StepActions)
-          ? props.StepActions.map(actionName => {
-              const found = stepActionsOptions.find(a => a.ActionName === actionName);
-              const originalAction = originalStep?.WorkFlowStepAction?.find(a => 
-                a.ActionId === found?.ActionId
-              );
-              return {
-                name: actionName,
-                id: originalAction?.Id || ""
-              };
-            })
-          : [],
-        UserNames: Array.isArray(props.UserNames)
-          ? props.UserNames.map(userName => {
-              const found = stepUsersOptions.find(u => u.UserName === userName);
-              const originalUser = originalStep?.WorkFlowStepUser?.find(u => 
-                u.UserId === found?.UserId
-              );
-              return {
-                name: userName,
-                id: originalUser?.Id || ""
-              };
-            })
-          : [],
-        purposeForForward: props.PurposeForForward || "",
-        shortPurposeForForward: props.ShortPurposeForForward || "",
-        Id: originalStep?.Id || "",
-        StepCode: stepCode
-      };
-      console.log("🎯 Normalized Props:", normalizedProps);
-      setNodeProperties(normalizedProps);
-      setModalIsOpen(true);
+      setDrawerNode(node);
+      setDrawerNodeProperties(node.data.properties || {});
+      setDrawerOpen(true);
+      setEditMode(false); // Reset edit mode when opening drawer
+      setSelectedNode(node); // keep for compatibility
     };
 
-    // Function to update node properties
-    const updateNodeProperties = (e) => {
-      const { name } = e.target;
-      let value;
-
-      // Handle different input types correctly
-      if (e.target.type === "checkbox") {
-        value = e.target.checked;
-      } else {
-        value = e.target.value;
-      }
-
-      setNodeProperties((prevProps) => ({
-        ...prevProps,
+    // Function to update drawer node properties in edit mode
+    const updateDrawerNodeProperties = (e) => {
+      const { name, value } = e.target;
+      setDrawerNodeProperties((prev) => ({
+        ...prev,
         [name]: value,
       }));
     };
 
-    // Save properties to the node
-    const saveNodeProperties = () => {
+    // Save edited properties to the node
+    const saveDrawerNodeProperties = () => {
       addToUndoStack();
       setNodes((nds) =>
         nds.map((n) =>
-          n.id === selectedNode.id
+          n.id === drawerNode.id
             ? {
               ...n,
               data: {
                 ...n.data,
-                label: nodeProperties.stepName || n.data.label,
+                label: drawerNodeProperties.StepName || n.data.label,
                 properties: {
-                  Id: nodeProperties.Id || "",
-                  StepCode: nodeProperties.StepCode || "",
-                  StepName: nodeProperties.stepName || "",
-                  PurposeForForward: nodeProperties.purposeForForward || "",
-                  ShortPurposeForForward:
-                    nodeProperties.shortPurposeForForward || "",
-                  StepActions: nodeProperties.stepActions?.map(action => 
-                    typeof action === 'string' ? action : action.name
-                  ) || [],
-                  UserNames: nodeProperties.UserNames?.map(user => 
-                    typeof user === 'string' ? user : user.name
-                  ) || [],
-                  NodeShape: n.data.nodeShape,
+                  ...drawerNodeProperties,
                 },
               },
             }
             : n
         )
       );
-      
-      setEdges((eds) => {
-        const outgoing = eds.filter((e) => e.source === selectedNode.id);
-        return eds.map((e) => {
-          if (e.source === selectedNode.id) {
-            // Keep the existing label if it's still in the StepActions list
-            const stepActions = nodeProperties.stepActions?.map(action => 
-              typeof action === 'string' ? action : action.name
-            ) || [];
-            
-            if (stepActions.includes(e.label)) {
-              return e; // Keep the existing edge unchanged
-            }
-            
-            // If the current label is not in StepActions, only then assign a new one
-            const actionIndex = outgoing.findIndex((x) => x.id === e.id);
-            const newLabel = nodeProperties.stepActions?.[actionIndex]?.name || 
-                           (typeof nodeProperties.stepActions?.[actionIndex] === 'string' ? 
-                           nodeProperties.stepActions?.[actionIndex] : e.label);
-            return {
-              ...e,
-              label: newLabel,
-              data: {
-                ...e.data,
-                actionName: newLabel,
-              },
-            };
-          }
-          return e;
-        });
-      });
-      setSelectedNode(null);
-      setModalIsOpen(false);
+      setDrawerOpen(false);
+      setEditMode(false);
+      setDrawerNode(null);
     };
 
     // Allow changing edge connections dynamically
@@ -1500,36 +1648,66 @@ const WorkflowEditor = forwardRef(
       return nodes.map((n) => ({ ...n, draggable: !isLocked }));
     }, [nodes, isLocked]);
 
-    // Remove the modalStyles object since we're using CSS classes now
-    const modalStyles = {
-      header: {
-        textAlign: "center",
-        marginBottom: "15px",
-        fontWeight: "bold",
-        fontSize: "20px",
-        color: "#1e293b",
-      },
-      label: {
-        fontWeight: "bold",
-        fontSize: "14px",
-        color: "#374151",
-      },
-      input: {
-        fontSize: "14px",
-        padding: "8px",
-        borderRadius: "5px",
-        border: "1px solid #ccc",
-        width: "100%",
-      },
-      content: {
-        fontSize: "14px",
-        color: "#374151",
-      },
-    };
+
 
     useEffect(() => {
       // console.log("Current nodes state:", nodes);
     }, [nodes]);
+
+    // Add template loading function
+    const loadTemplate = (template) => {
+      if (isLocked) return showLockedToast();
+
+      // Clear existing workflow
+      setNodes([]);
+      setEdges([]);
+
+      // Add template nodes and edges
+      setNodes(template.nodes);
+      setEdges(template.edges);
+
+      // Center the view
+      setTimeout(() => {
+        reactFlowInstance.fitView();
+      }, 100);
+    };
+
+    const renderTooltip = (node) => {
+      const props = node.data.properties || {};
+      return (
+        <div className="node-tooltip">
+          <span className="tooltip-title">{node.data.label}</span>
+          <div className="tooltip-property" data-label="Step Name">
+            Step Name : {props.StepName || node.data.label}
+          </div>
+          {props.StepActions && props.StepActions.length > 0 && (
+            <div className="tooltip-property" data-label="Step Actions">
+              Step Actions :
+              <ul>
+                {props.StepActions.map((action, index) => (
+                  <li key={index}>{action}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {props.UserNames && props.UserNames.length > 0 && (
+            <div className="tooltip-property" data-label="Step Users">
+              Step Users :
+              <ul>
+                {props.UserNames.map((user, index) => (
+                  <li key={index}>{user}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {props.PurposeForForward && (
+            <div className="tooltip-property" data-label="Purpose">
+              Purpose : {props.PurposeForForward}
+            </div>
+          )}
+        </div>
+      );
+    };
 
     return (
       <div className="workflow-editor-container">
@@ -1544,6 +1722,9 @@ const WorkflowEditor = forwardRef(
           draggable
           pauseOnHover
           theme="light"
+          closeButton={true}
+          toastClassName="custom-toast"
+          bodyClassName="custom-toast-body"
         />
         {/* Sidebar Menu */}
         <div className="workflow-sidebar">
@@ -1589,6 +1770,32 @@ const WorkflowEditor = forwardRef(
             ))}
           </div>
 
+          {/* Add template workflows */}
+          <div className="template-workflows-container">
+            <div className="desktop-only">
+              <p className="template-workflows-title">🎯 Dynamic Template</p>
+            </div>
+            <div className="dynamic-template-controls">
+              <input
+                type="number"
+                min="1"
+                max="10"
+                value={nodeCount}
+                onChange={(e) => setNodeCount(Math.min(10, Math.max(1, parseInt(e.target.value) || 1)))}
+                className="node-counter-input"
+              />
+              <button
+                onClick={loadDynamicTemplate}
+                className="generate-template-button"
+              >
+                Generate Template
+              </button>
+            </div>
+            <div className="dynamic-template-description">
+              Create a template with {nodeCount} step{nodeCount !== 1 ? 's' : ''}
+            </div>
+          </div>
+
           {/* Action Buttons */}
           {sidebarButtons.map(({ label, icon, action, color }) => (
             <button
@@ -1601,6 +1808,27 @@ const WorkflowEditor = forwardRef(
               <span className="sidebar-button-text">{label}</span>
             </button>
           ))}
+
+          <div style={{
+            background: '#ffffff',
+            border: '1px solid #ffffff',
+            borderRadius: '8px',
+            padding: '10px 12px',
+            marginBottom: '8px',
+            fontSize: '14px',
+            color: '#000000',
+            lineHeight: 1.6
+          }}>
+            <b>Editor Tips:</b>
+            <ul style={{margin: '6px 0 0 16px', padding: 0}}>
+              <li>Drag and drop nodes from <b>Node Types</b> to the canvas.</li>
+              <li>From the Handles draw the edges to connect between the Nodes.</li>
+              <li>Click a node to view or edit its properties.</li>
+              <li>Right-click a node for more options (delete, duplicate, add connected node).</li>
+              
+              <li>Undo/Redo with the ⟲/⟳ buttons or Ctrl+Z/Ctrl+Y.</li>
+            </ul>
+          </div>
         </div>
 
         {/* Workflow Editor */}
@@ -1781,7 +2009,7 @@ const WorkflowEditor = forwardRef(
               </div>
             )}
           </ReactFlow>
-         
+
         </div>
 
         {/* Context Menus */}
@@ -1835,10 +2063,10 @@ const WorkflowEditor = forwardRef(
                     const usedActions = edges
                       .filter(e => e.source === selectedEdge.source && e.id !== selectedEdge.id)
                       .map(e => e.label);
-                    
+
                     return stepActionsOptions
-                      .filter((action) => 
-                        selectedActionNames.includes(action.ActionName) && 
+                      .filter((action) =>
+                        selectedActionNames.includes(action.ActionName) &&
                         !usedActions.includes(action.ActionName)
                       )
                       .map((action) => ({
@@ -1993,347 +2221,292 @@ const WorkflowEditor = forwardRef(
           </div>
         )}
 
-        {/* Modal for Node Properties */}
-        <Modal
-          isOpen={modalIsOpen}
-          onRequestClose={() => setModalIsOpen(false)}
-          parentSelector={() => document.querySelector(".container")}
-          className="modal-content node-properties-modal"
-        >
-          <h2 className="modal-header">Step Properties</h2>
-
-          <div className="modal-content-container">
-            {/* Description Field */}
-            <div class="form-input-section">
-              <label className="modal-label">Step Name :</label>
-              <input
-                type="text"
-                name="stepName"
-                value={nodeProperties.stepName || ""}
-                onChange={updateNodeProperties}
-                className="modal-input common-form-field-height"
-              />
+        {/* Drawer for node properties */}
+        {drawerOpen && drawerNode && (
+          <div className="drawer">
+            <div className="drawer-close" onClick={() => setDrawerOpen(false)}>&times;</div>
+            <div className="drawer-actions">
+              <div className="drawer-header">Step Properties</div>
+              {!editMode && (
+                <button 
+                  onClick={() => {
+                    setEditMode(true);
+                  }}
+                  className="edit-button"
+                >
+                  Edit
+                </button>
+              )}
             </div>
-            <div class="form-input-section">
-              {/* Step Actions Multi-Select */}
-              <label className="modal-label">Step Actions:</label>
-              <Select
-                isMulti
-                closeMenuOnSelect={false}
-                hideSelectedOptions={false}
-                options={[
-                  { 
-                    label: "Select All", 
-                    value: "__SELECT_ALL__",
-                    isDisabled: false 
-                  },
-                  ...stepActionsOptions.map((action) => ({
-                    label: action.ActionName,
-                    value: action.ActionName,
-                  }))
-                ]}
-                value={
-                  nodeProperties.stepActions?.map((actionName) => ({
-                    label: actionName,
-                    value: actionName,
-                  })) || []
-                }
-                onChange={(selected) => {
-                  const hasSelectAll = selected?.some(item => item.value === "__SELECT_ALL__");
-                  const allActionNames = stepActionsOptions.map(action => action.ActionName);
-                  const currentActionNames = nodeProperties.stepActions || [];
+            <div className="drawer-content">
+              {!editMode ? (
+                <>
+                  <div className="drawer-label">Step Name :
+                  {drawerNodeProperties.StepName || drawerNode.data.label}</div>
+                  <div className="drawer-label">Step Actions :
                   
-                  if (hasSelectAll) {
-                    // If "Select All" was clicked, check if all are selected
-                    const allSelected = allActionNames.every(name => 
-                      currentActionNames.includes(name)
-                    );
-                    
-                    if (allSelected) {
-                      // Deselect all
-                      setNodeProperties((prev) => ({
-                        ...prev,
-                        stepActions: [],
-                      }));
-                    } else {
-                      // Select all
-                      setNodeProperties((prev) => ({
-                        ...prev,
-                        stepActions: allActionNames,
-                      }));
+                    {(drawerNodeProperties.StepActions || []).map((action, idx) => (
+                      <span
+                        key={idx}
+                        style={{
+                          background: '#e2e8f0',
+                          color: '#1e293b',
+                          padding: '2px 8px',
+                          borderRadius: '12px',
+                          fontSize: '11px',
+                          display: 'inline-block',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {action}
+                      </span>
+                    ))}
+                  </div>
+                  <div className="drawer-label">Step Users :
+                  
+                    {(drawerNodeProperties.UserNames || []).map((user, idx) => (
+                      <span
+                        key={idx}
+                        style={{
+                          background: '#e2e8f0', // match Step Actions
+                          color: '#1e293b',      // match Step Actions
+                          padding: '2px 8px',
+                          borderRadius: '12px',
+                          fontSize: '11px',
+                          display: 'inline-block',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {user}
+                      </span>
+                    ))}
+                  </div>
+
+                </>
+              ) : (
+                <>
+                  <div className="drawer-label">Step Name :</div>
+                  <input
+                    type="text"
+                    name="StepName"
+                    value={drawerNodeProperties.StepName || ""}
+                    onChange={updateDrawerNodeProperties}
+                    className="modal-input"
+                   
+                  />
+                  <div className="drawer-label">Step Actions :</div>
+                  <Select
+                    isMulti
+                    closeMenuOnSelect={false}
+                    hideSelectedOptions={false}
+                    options={[
+                      { label: "Select All", value: "__SELECT_ALL__" },
+                      ...stepActionsOptions.map(action => ({
+                        label: action.ActionName,
+                        value: action.ActionName,
+                      }))
+                    ]}
+                    value={
+                      (drawerNodeProperties.StepActions || []).map(actionName => ({
+                        label: actionName,
+                        value: actionName,
+                      })) || []
                     }
-                  } else {
-                    // Normal selection
-                    setNodeProperties((prev) => ({
-                      ...prev,
-                      stepActions: selected ? selected.map((item) => item.value) : [],
-                    }));
-                  }
-                }}
-                className="modal-select common-form-field-height"
-                classNamePrefix="modal-select"
-                components={{
-                  MultiValue: ({ index, getValue, ...props }) => {
-                    // Don't show the "Select All" option in the selected values
-                    if (props.data.value === "__SELECT_ALL__") {
-                      return null;
-                    }
-                    
-                    const maxToShow = 2;
-                    const values = getValue().filter(v => v.value !== "__SELECT_ALL__");
-                    const length = values.length;
-                    
-                    // Don't render anything for indices beyond maxToShow
-                    if (index >= maxToShow) {
-                      return null;
-                    }
-                    
-                    // If this is the second item and there are more items
-                    if (index === 1 && length > maxToShow) {
-                      return (
-                        <>
-                          <div className="multi-value-container">
-                            {props.data.label}
-                          </div>
-                          <div className="count-number">
-                            +{length - maxToShow}
-                          </div>
-                        </>
-                      );
-                    }
-                    
-                    // For the first item or if there are only 2 or fewer items
-                    return (
-                      <div className="multi-value-container">
-                        {props.data.label}
-                      </div>
-                    );
-                  },
-                  Option: ({ children, ...props }) => {
-                    const { isSelected, isFocused, innerRef, innerProps, data } = props;
-                    
-                    // Special handling for "Select All" option
-                    if (data.value === "__SELECT_ALL__") {
+                    onChange={selected => {
+                      const hasSelectAll = selected?.some(item => item.value === "__SELECT_ALL__");
                       const allActionNames = stepActionsOptions.map(action => action.ActionName);
-                      const currentActionNames = nodeProperties.stepActions || [];
-                      const allSelected = allActionNames.every(name => 
-                        currentActionNames.includes(name)
-                      );
-                      
-                      return (
-                        <div
-                          ref={innerRef}
-                          {...innerProps}
-                          className="multi-value-option"
-                          style={{
-                            backgroundColor: isFocused ? '#f0f0f0' : 'white',
-                            fontWeight: 'bold',
-                            borderBottom: '1px solid #e5e5e5'
-                          }}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={allSelected}
-                            onChange={() => null}
-                            className="multi-value-checkbox"
-                          />
-                          <div>{children}</div>
-                        </div>
-                      );
-                    }
-                    
-                    return (
-                      <div
-                        ref={innerRef}
-                        {...innerProps}
-                        className="multi-value-option"
-                        style={{
-                          backgroundColor: isFocused ? '#f0f0f0' : 'white',
-                        }}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={isSelected}
-                          onChange={() => null}
-                          className="multi-value-checkbox"
-                        />
-                        <div>{children}</div>
-                      </div>
-                    );
-                  },
-                }}
-              />
-            </div>
-            <div class="form-input-section">
-              {/* Users Multi-Select */}
-              <label className="modal-label">Users:</label>
-              <Select
-                isMulti
-                closeMenuOnSelect={false}
-                hideSelectedOptions={false}
-                options={[
-                  { 
-                    label: "Select All", 
-                    value: "__SELECT_ALL_USERS__",
-                    isDisabled: false 
-                  },
-                  ...stepUsersOptions.map((user) => ({
-                    label: user.UserName,
-                    value: user.UserName,
-                  }))
-                ]}
-                value={
-                  nodeProperties.UserNames?.map((userName) => ({
-                    label: userName,
-                    value: userName,
-                  })) || []
-                }
-                onChange={(selected) => {
-                  const hasSelectAll = selected?.some(item => item.value === "__SELECT_ALL_USERS__");
-                  const allUserNames = stepUsersOptions.map(user => user.UserName);
-                  const currentUserNames = nodeProperties.UserNames || [];
-                  
-                  if (hasSelectAll) {
-                    // If "Select All" was clicked, check if all are selected
-                    const allSelected = allUserNames.every(name => 
-                      currentUserNames.includes(name)
-                    );
-                    
-                    if (allSelected) {
-                      // Deselect all
-                      setNodeProperties((prev) => ({
-                        ...prev,
-                        UserNames: [],
-                      }));
-                    } else {
-                      // Select all
-                      setNodeProperties((prev) => ({
-                        ...prev,
-                        UserNames: allUserNames,
-                      }));
-                    }
-                  } else {
-                    // Normal selection
-                    setNodeProperties((prev) => ({
-                      ...prev,
-                      UserNames: selected ? selected.map((item) => item.value) : [],
-                    }));
-                  }
-                }}
-                className="modal-select common-form-field-height"
-                classNamePrefix="modal-select"
-                components={{
-                  MultiValue: ({ index, getValue, ...props }) => {
-                    // Don't show the "Select All" option in the selected values
-                    if (props.data.value === "__SELECT_ALL_USERS__") {
-                      return null;
-                    }
-                    
-                    const maxToShow = 2;
-                    const values = getValue().filter(v => v.value !== "__SELECT_ALL_USERS__");
-                    const length = values.length;
-                    
-                    // Don't render anything for indices beyond maxToShow
-                    if (index >= maxToShow) {
-                      return null;
-                    }
-                    
-                    // If this is the second item and there are more items
-                    if (index === 1 && length > maxToShow) {
-                      return (
-                        <>
-                          <div className="multi-value-container">
-                            {props.data.label}
+                      const currentActionNames = drawerNodeProperties.StepActions || [];
+                      if (hasSelectAll) {
+                        // If "Select All" was clicked, check if all are selected
+                        const allSelected = allActionNames.every(name => currentActionNames.includes(name));
+                        setDrawerNodeProperties(prev => ({
+                          ...prev,
+                          StepActions: allSelected ? [] : allActionNames,
+                        }));
+                      } else {
+                        setDrawerNodeProperties(prev => ({
+                          ...prev,
+                          StepActions: selected ? selected.map(item => item.value) : [],
+                        }));
+                      }
+                    }}
+                    className="modal-select"
+                    classNamePrefix="modal-select"
+                    components={{
+                      Option: ({ children, ...props }) => {
+                        const { isSelected, isFocused, innerRef, innerProps, data } = props;
+                        if (data.value === "__SELECT_ALL__") {
+                          const allActionNames = stepActionsOptions.map(action => action.ActionName);
+                          const currentActionNames = drawerNodeProperties.StepActions || [];
+                          const allSelected = allActionNames.every(name => currentActionNames.includes(name));
+                          return (
+                            <div
+                              ref={innerRef}
+                              {...innerProps}
+                              className="multi-value-option"
+                              style={{
+                                backgroundColor: isFocused ? '#f0f0f0' : 'white',
+                                fontWeight: 'bold',
+                                borderBottom: '1px solid #e5e5e5'
+                              }}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={allSelected}
+                                readOnly
+                                className="multi-value-checkbox"
+                              />
+                              <div>{children}</div>
+                            </div>
+                          );
+                        }
+                        return (
+                          <div
+                            ref={innerRef}
+                            {...innerProps}
+                            className="multi-value-option"
+                            style={{
+                              backgroundColor: isFocused ? '#f0f0f0' : 'white',
+                            }}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              readOnly
+                              className="multi-value-checkbox"
+                            />
+                            <div>{children}</div>
                           </div>
-                          <div className="count-number">
-                            +{length - maxToShow}
-                          </div>
-                        </>
-                      );
+                        );
+                      },
+                      MultiValue: ({ index, getValue, ...props }) => {
+                        const values = getValue();
+                        const maxToShow = 2;
+                        const length = values.length;
+                        if (index >= maxToShow) return null;
+                        if (index === 1 && length > maxToShow) {
+                          return (
+                            <>
+                              <div className="multi-value-container">{props.data.label}</div>
+                              <div className="count-number">+{length - maxToShow}</div>
+                            </>
+                          );
+                        }
+                        return <div className="multi-value-container">{props.data.label}</div>;
+                      },
+                    }}
+                  />
+                  <div className="drawer-label">Step Users :</div>
+                  <Select
+                    isMulti
+                    closeMenuOnSelect={false}
+                    hideSelectedOptions={false}
+                    options={[
+                      { label: "Select All", value: "__SELECT_ALL_USERS__" },
+                      ...stepUsersOptions.map(user => ({
+                        label: user.UserName,
+                        value: user.UserName,
+                      }))
+                    ]}
+                    value={
+                      (drawerNodeProperties.UserNames || []).map(userName => ({
+                        label: userName,
+                        value: userName,
+                      })) || []
                     }
-                    
-                    // For the first item or if there are only 2 or fewer items
-                    return (
-                      <div className="multi-value-container">
-                        {props.data.label}
-                      </div>
-                    );
-                  },
-                  Option: ({ children, ...props }) => {
-                    const { isSelected, isFocused, innerRef, innerProps, data } = props;
-                    
-                    // Special handling for "Select All" option
-                    if (data.value === "__SELECT_ALL_USERS__") {
+                    onChange={selected => {
+                      const hasSelectAll = selected?.some(item => item.value === "__SELECT_ALL_USERS__");
                       const allUserNames = stepUsersOptions.map(user => user.UserName);
-                      const currentUserNames = nodeProperties.UserNames || [];
-                      const allSelected = allUserNames.every(name => 
-                        currentUserNames.includes(name)
-                      );
-                      
-                      return (
-                        <div
-                          ref={innerRef}
-                          {...innerProps}
-                          className="multi-value-option"
-                          style={{
-                            backgroundColor: isFocused ? '#f0f0f0' : 'white',
-                            fontWeight: 'bold',
-                            borderBottom: '1px solid #e5e5e5'
-                          }}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={allSelected}
-                            onChange={() => null}
-                            className="multi-value-checkbox"
-                          />
-                          <div>{children}</div>
-                        </div>
-                      );
-                    }
+                      const currentUserNames = drawerNodeProperties.UserNames || [];
+                      if (hasSelectAll) {
+                        const allSelected = allUserNames.every(name => currentUserNames.includes(name));
+                        setDrawerNodeProperties(prev => ({
+                          ...prev,
+                          UserNames: allSelected ? [] : allUserNames,
+                        }));
+                      } else {
+                        setDrawerNodeProperties(prev => ({
+                          ...prev,
+                          UserNames: selected ? selected.map(item => item.value) : [],
+                        }));
+                      }
+                    }}
+                    className="modal-select"
+                    classNamePrefix="modal-select"
+                    components={{
+                      Option: ({ children, ...props }) => {
+                        const { isSelected, isFocused, innerRef, innerProps, data } = props;
+                        if (data.value === "__SELECT_ALL_USERS__") {
+                          const allUserNames = stepUsersOptions.map(user => user.UserName);
+                          const currentUserNames = drawerNodeProperties.UserNames || [];
+                          const allSelected = allUserNames.every(name => currentUserNames.includes(name));
+                          return (
+                            <div
+                              ref={innerRef}
+                              {...innerProps}
+                              className="multi-value-option"
+                              style={{
+                                backgroundColor: isFocused ? '#f0f0f0' : 'white',
+                                fontWeight: 'bold',
+                                borderBottom: '1px solid #e5e5e5'
+                              }}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={allSelected}
+                                readOnly
+                                className="multi-value-checkbox"
+                              />
+                              <div>{children}</div>
+                            </div>
+                          );
+                        }
+                        return (
+                          <div
+                            ref={innerRef}
+                            {...innerProps}
+                            className="multi-value-option"
+                            style={{
+                              backgroundColor: isFocused ? '#f0f0f0' : 'white',
+                            }}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              readOnly
+                              className="multi-value-checkbox"
+                            />
+                            <div>{children}</div>
+                          </div>
+                        );
+                      },
+                      MultiValue: ({ index, getValue, ...props }) => {
+                        const values = getValue();
+                        const maxToShow = 2;
+                        const length = values.length;
+                        if (index >= maxToShow) return null;
+                        if (index === 1 && length > maxToShow) {
+                          return (
+                            <>
+                              <div className="multi-value-container">{props.data.label}</div>
+                              <div className="count-number">+{length - maxToShow}</div>
+                            </>
+                          );
+                        }
+                        return <div className="multi-value-container">{props.data.label}</div>;
+                      },
+                    }}
+                  />
+                  <div className="drawer-actions">
                     
-                    return (
-                      <div
-                        ref={innerRef}
-                        {...innerProps}
-                        className="multi-value-option"
-                        style={{
-                          backgroundColor: isFocused ? '#f0f0f0' : 'white',
-                        }}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={isSelected}
-                          onChange={() => null}
-                          className="multi-value-checkbox"
-                        />
-                        <div>{children}</div>
-                      </div>
-                    );
-                  },
-                }}
-              />
-            </div>
-            {/* Buttons */}
-            <div className="modal-buttons-container">
-              <button
-                onClick={() => setModalIsOpen(false)}
-                className="modal-button modal-button-cancel common-form-field-height"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={saveNodeProperties}
-                className="modal-button modal-button-save common-form-field-height"
-                style={{ backgroundColor: saveButtonColor }}
-              >
-                Save
-              </button>
-
+                    <button onClick={() => setEditMode(false)} className="modal-button-cancel">Cancel</button>
+                    <button onClick={saveDrawerNodeProperties} className="modal-button-save" style={{ background: saveButtonColor }}>Save</button>
+                  </div>
+                </>
+              )}
             </div>
           </div>
-        </Modal>
-
+        )}
 
       </div>
     );
