@@ -948,6 +948,87 @@
 .drawer button:hover {
   background: #4338ca;
 }
+/* Confirmation Modal Styles */
+.confirmation-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 100000;
+}
+
+.confirmation-modal {
+  background: white;
+  border-radius: 8px;
+  padding: 24px;
+  max-width: 400px;
+  width: 90%;
+  position: relative;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  outline: none;
+}
+
+.confirmation-modal-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.confirmation-modal-content h3 {
+  margin: 0;
+  color: #1e293b;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.confirmation-modal-content p {
+  margin: 0;
+  color: #475569;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.confirmation-modal-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.confirmation-modal-buttons button {
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.confirmation-modal-buttons .modal-button-cancel {
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+}
+
+.confirmation-modal-buttons .modal-button-cancel:hover {
+  background: #e2e8f0;
+}
+
+.confirmation-modal-buttons .modal-button-save {
+  color: white;
+  border: none;
+}
+
+.confirmation-modal-buttons .modal-button-save:hover {
+  opacity: 0.9;
+}
+
+
 
 @media screen and (max-width: 1250px) {
   .workflow-editor-container .workflow-sidebar {

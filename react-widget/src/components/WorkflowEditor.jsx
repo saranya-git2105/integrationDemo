@@ -17,6 +17,8 @@ import ReactFlow, {
   MarkerType,
   useReactFlow,
   EdgeLabelRenderer,
+  applyNodeChanges,
+  applyEdgeChanges,
 } from "reactflow";
 import { ControlButton } from "reactflow";
 import { FaLock, FaUnlock } from "react-icons/fa";
@@ -125,6 +127,8 @@ const WorkflowEditor = forwardRef(
     const [drawerNode, setDrawerNode] = useState(null);
     const [editMode, setEditMode] = useState(false);
     const [drawerNodeProperties, setDrawerNodeProperties] = useState({});
+    const [confirmModalOpen, setConfirmModalOpen] = useState(false);
+    const [pendingTemplateAction, setPendingTemplateAction] = useState(null);
 
     // Add template workflows
     const templateWorkflows = useMemo(
@@ -354,20 +358,35 @@ const WorkflowEditor = forwardRef(
     const loadDynamicTemplate = () => {
       if (isLocked) return showLockedToast();
 
-      const template = generateDynamicTemplate(nodeCount);
+      // Check if there are existing nodes
+      if (nodes.length > 0) {
+        // Just show confirmation modal without generating template
+        setConfirmModalOpen(true);
+        return;
+      }
 
-      // Clear existing workflow
+      // If no nodes exist, proceed directly
+      const template = generateDynamicTemplate(nodeCount);
       setNodes([]);
       setEdges([]);
-
-      // Add template nodes and edges
       setNodes(template.nodes);
       setEdges(template.edges);
+    };
 
-      // Center the view
-      setTimeout(() => {
-        reactFlowInstance.fitView();
-      }, 100);
+    // Handle template confirmation
+    const handleTemplateConfirm = () => {
+      // Generate template only when confirmed
+      const template = generateDynamicTemplate(nodeCount);
+      setNodes([]);
+      setEdges([]);
+      setNodes(template.nodes);
+      setEdges(template.edges);
+      setConfirmModalOpen(false);
+    };
+
+    // Handle template cancellation
+    const handleTemplateCancel = () => {
+      setConfirmModalOpen(false);
     };
 
     const handleActionWithMeta = useCallback(
@@ -620,6 +639,44 @@ const WorkflowEditor = forwardRef(
       }
     }, [stepActionsOptions, stepUsersOptions]);
 
+    // Track all changes that should trigger undo/redo
+    const trackChange = useCallback(() => {
+      if (isLocked) return;
+      setUndoStack((prev) => [
+        ...prev.slice(-49),
+        { nodes: [...nodes], edges: [...edges] },
+      ]);
+      setRedoStack([]); // Clear redo stack on new action
+    }, [nodes, edges, isLocked]);
+
+    const handleUndo = useCallback(() => {
+      if (isLocked) return showLockedToast();
+      if (undoStack.length > 0) {
+        const last = undoStack[undoStack.length - 1];
+        setRedoStack((prev) => [
+          ...prev,
+          { nodes: [...nodes], edges: [...edges] },
+        ]); // Save current to redo
+        setNodes(last.nodes);
+        setEdges(last.edges);
+        setUndoStack((prev) => prev.slice(0, -1));
+      }
+    }, [undoStack, nodes, edges, isLocked]);
+
+    const handleRedo = useCallback(() => {
+      if (isLocked) return showLockedToast();
+      if (redoStack.length > 0) {
+        const next = redoStack[redoStack.length - 1];
+        setUndoStack((prev) => [
+          ...prev,
+          { nodes: [...nodes], edges: [...edges] },
+        ]); // Save current to undo
+        setNodes(next.nodes);
+        setEdges(next.edges);
+        setRedoStack((prev) => prev.slice(0, -1));
+      }
+    }, [redoStack, nodes, edges, isLocked]);
+
     const handleKeyDown = useCallback(
       (e) => {
         const activeTag = document.activeElement?.tagName?.toLowerCase();
@@ -631,45 +688,19 @@ const WorkflowEditor = forwardRef(
 
         if ((e.ctrlKey || e.metaKey) && e.key === "z") {
           e.preventDefault();
-          handleUndo();
+          if (e.shiftKey) {
+            handleRedo();
+          } else {
+            handleUndo();
+          }
         }
 
-        if (
-          (e.ctrlKey || e.metaKey) &&
-          (e.key === "y" || (e.shiftKey && e.key === "Z"))
-        ) {
+        if ((e.ctrlKey || e.metaKey) && e.key === "y") {
           e.preventDefault();
           handleRedo();
         }
-
-        if ((e.key === "Delete" || e.key === "Backspace") && !isLocked) {
-          if (selectedElements.length > 0) {
-            addToUndoStack();
-
-            const nodeIdsToDelete = selectedElements
-              .filter((el) => el.position)
-              .map((node) => node.id);
-
-            const edgeIdsToDelete = selectedElements
-              .filter((el) => el.source && el.target)
-              .map((edge) => edge.id);
-
-            setNodes((nds) =>
-              nds.filter((n) => !nodeIdsToDelete.includes(n.id))
-            );
-            setEdges((eds) =>
-              eds
-                .filter((e) => !edgeIdsToDelete.includes(e.id))
-                .filter(
-                  (e) =>
-                    !nodeIdsToDelete.includes(e.source) &&
-                    !nodeIdsToDelete.includes(e.target)
-                )
-            );
-          }
-        }
       },
-      [selectedElements, isLocked]
+      [handleUndo, handleRedo]
     );
 
     useEffect(() => {
@@ -677,37 +708,83 @@ const WorkflowEditor = forwardRef(
       return () => window.removeEventListener("keydown", handleKeyDown);
     }, [handleKeyDown]);
 
-    const addToUndoStack = (newNodes = nodes, newEdges = edges) => {
-      setUndoStack((prev) => [
-        ...prev.slice(-49),
-        { nodes: [...newNodes], edges: [...newEdges] },
-      ]);
-      setRedoStack([]); // Clear redo stack on new action
-    };
-    const handleUndo = () => {
-      if (undoStack.length > 0) {
-        const last = undoStack[undoStack.length - 1];
-        setRedoStack((prev) => [
-          ...prev,
-          { nodes: [...nodes], edges: [...edges] },
-        ]); // Save current to redo
-        setNodes(last.nodes);
-        setEdges(last.edges);
-        setUndoStack((prev) => prev.slice(0, -1));
+    // Handle node changes
+    const handleNodesChange = useCallback((changes) => {
+      if (!isLocked) {
+        const hasPositionChanges = changes.some(
+          (change) => change.type === "position" && change.dragging === false
+        );
+        const hasSelectionChanges = changes.some(
+          (change) => change.type === "select"
+        );
+        const hasRemoveChanges = changes.some(
+          (change) => change.type === "remove"
+        );
+
+        if (hasPositionChanges || hasRemoveChanges) {
+          trackChange();
+        }
+        setNodes((nds) => applyNodeChanges(changes, nds));
       }
-    };
-    const handleRedo = () => {
-      if (redoStack.length > 0) {
-        const next = redoStack[redoStack.length - 1];
-        setUndoStack((prev) => [
-          ...prev,
-          { nodes: [...nodes], edges: [...edges] },
-        ]); // Save current to undo
-        setNodes(next.nodes);
-        setEdges(next.edges);
-        setRedoStack((prev) => prev.slice(0, -1));
+    }, [isLocked, trackChange]);
+
+    // Handle edge changes
+    const handleEdgesChange = useCallback((changes) => {
+      if (!isLocked) {
+        const hasEdgeChanges = changes.some(
+          (change) => change.type === "remove" || change.type === "add"
+        );
+        if (hasEdgeChanges) {
+          trackChange();
+        }
+        setEdges((eds) => applyEdgeChanges(changes, eds));
       }
-    };
+    }, [isLocked, trackChange]);
+
+    // Handle node drag stop
+    const handleNodeDragStop = useCallback(() => {
+      if (!isLocked) {
+        trackChange();
+      }
+    }, [isLocked, trackChange]);
+
+    // Handle edge updates
+    const handleEdgeUpdate = useCallback((oldEdge, newConnection) => {
+      if (!isLocked) {
+        trackChange();
+        setEdges((eds) =>
+          eds.map((edge) =>
+            edge.id === oldEdge.id ? { ...edge, ...newConnection } : edge
+          )
+        );
+      }
+    }, [isLocked, trackChange]);
+
+    // Handle node property updates
+    const saveDrawerNodeProperties = useCallback(() => {
+      if (!isLocked) {
+        trackChange();
+        setNodes((nds) =>
+          nds.map((n) =>
+            n.id === drawerNode.id
+              ? {
+                  ...n,
+                  data: {
+                    ...n.data,
+                    label: drawerNodeProperties.StepName || n.data.label,
+                    properties: {
+                      ...drawerNodeProperties,
+                    },
+                  },
+                }
+              : n
+          )
+        );
+        setDrawerOpen(false);
+        setEditMode(false);
+        setDrawerNode(null);
+      }
+    }, [drawerNode, drawerNodeProperties, isLocked, trackChange]);
 
     // Handle Drag Start
     const onDragStart = (event, nodeType) => {
@@ -750,7 +827,7 @@ const WorkflowEditor = forwardRef(
     const onDrop = (event) => {
       if (isLocked) return showLockedToast();
       event.preventDefault();
-      addToUndoStack();
+      trackChange();
       const reactFlowBounds = event.target.getBoundingClientRect();
       const nodeType = event.dataTransfer.getData("application/reactflow");
 
@@ -1547,51 +1624,6 @@ const WorkflowEditor = forwardRef(
       }));
     };
 
-    // Save edited properties to the node
-    const saveDrawerNodeProperties = () => {
-      addToUndoStack();
-      setNodes((nds) =>
-        nds.map((n) =>
-          n.id === drawerNode.id
-            ? {
-              ...n,
-              data: {
-                ...n.data,
-                label: drawerNodeProperties.StepName || n.data.label,
-                properties: {
-                  ...drawerNodeProperties,
-                },
-              },
-            }
-            : n
-        )
-      );
-      setDrawerOpen(false);
-      setEditMode(false);
-      setDrawerNode(null);
-    };
-
-    // Allow changing edge connections dynamically
-    const onEdgeUpdate = (oldEdge, newConnection) => {
-      setEdges((eds) =>
-        eds.map((edge) =>
-          edge.id === oldEdge.id ? { ...edge, ...newConnection } : edge
-        )
-      );
-    };
-
-    const updateEdgeLabel = (label) => {
-      if (selectedEdge) {
-        addToUndoStack();
-        setEdges((eds) =>
-          eds.map((edge) =>
-            edge.id === selectedEdge.id ? { ...edge, label } : edge
-          )
-        );
-        setSelectedEdge((prev) => ({ ...prev, label }));
-      }
-      setContextMenu(null);
-    };
     const handleEdgeClick = (event, edge) => {
       if (isLocked) return showLockedToast();
       event.stopPropagation(); // Prevent any bubbling
@@ -1726,6 +1758,25 @@ const WorkflowEditor = forwardRef(
           toastClassName="custom-toast"
           bodyClassName="custom-toast-body"
         />
+
+        {/* Add Confirmation Modal */}
+        <Modal
+          isOpen={confirmModalOpen}
+          onRequestClose={handleTemplateCancel}
+          className="confirmation-modal"
+          overlayClassName="confirmation-modal-overlay"
+          contentLabel="Confirm Template Change"
+        >
+          <div className="confirmation-modal-content">
+            <h3>Confirm Template Change</h3>
+            <p>There are existing nodes on the canvas. Are you sure you want to replace them with a new template?</p>
+            <div className="confirmation-modal-buttons">
+              <button onClick={handleTemplateCancel} className="modal-button-cancel">Cancel</button>
+              <button onClick={handleTemplateConfirm} className="modal-button-save" style={{ background: saveButtonColor }}>Confirm</button>
+            </div>
+          </div>
+        </Modal>
+
         {/* Sidebar Menu */}
         <div className="workflow-sidebar">
           {/* Only show titles on desktop */}
@@ -1736,11 +1787,21 @@ const WorkflowEditor = forwardRef(
 
             <div className="sidebar-controls">
               {/* Undo Button */}
-              <div className="control-button" onClick={handleUndo} title="Undo (Ctrl+Z)">
+              <div 
+                className="control-button" 
+                onClick={handleUndo} 
+                title="Undo (Ctrl+Z)"
+                style={{ opacity: undoStack.length > 0 ? 1 : 0.5 }}
+              >
                 <FiRotateCcw size={12} color="#1e293b" />
               </div>
               {/* Redo Button */}
-              <div className="control-button" onClick={handleRedo} title="Redo (Ctrl+Y)">
+              <div 
+                className="control-button" 
+                onClick={handleRedo} 
+                title="Redo (Ctrl+Y)"
+                style={{ opacity: redoStack.length > 0 ? 1 : 0.5 }}
+              >
                 <FiRotateCw size={12} color="#1e293b" />
               </div>
             </div>
@@ -1840,38 +1901,49 @@ const WorkflowEditor = forwardRef(
           )}
           <ReactFlow
             nodes={memoizedNodes}
-            edges={edges.map((edge) => {
-              const sourceNode = nodes.find((n) => n.id === edge.source);
-              const targetNode = nodes.find((n) => n.id === edge.target);
-              let stroke = "#333"; // default neutral
-
-              if (sourceNode && targetNode) {
-                if (targetNode.position.y > sourceNode.position.y) {
-                  stroke = "green"; // Forward
-                } else if (targetNode.position.y < sourceNode.position.y) {
-                  stroke = "red"; // Backward
-                }
+            edges={edges}
+            onNodesChange={handleNodesChange}
+            onEdgesChange={handleEdgesChange}
+            onNodeDragStop={handleNodeDragStop}
+            onEdgeUpdate={handleEdgeUpdate}
+            onConnect={(params) => {
+              if (isLocked) return showLockedToast();
+              if (params.source === "stop") {
+                toast.error("🚫 You cannot draw connections from the Stop node.", {
+                  position: "top-right",
+                  autoClose: 500,
+                  hideProgressBar: true,
+                  closeOnClick: true,
+                  pauseOnHover: true,
+                  draggable: true,
+                });
+                return;
               }
-
-              return {
-                ...edge,
-                style: {
-                  ...(edge.style || {}),
-                  stroke,
-                  strokeWidth: 2,
-                },
-              };
-            })}
+              trackChange();
+              setEdges((eds) =>
+                addEdge(
+                  {
+                    ...params,
+                    animated: false,
+                    type: edgeStyle,
+                    markerEnd: { type: MarkerType.ArrowClosed },
+                    style: { strokeWidth: 2, stroke: "#333" },
+                    label: "",
+                    data: {
+                      shortPurposeForForward: "",
+                      purposeForForward: "",
+                    },
+                  },
+                  eds
+                )
+              );
+            }}
             edgeTypes={edgeTypes}
             nodeTypes={nodeTypes}
-            onNodesChange={isLocked ? undefined : onNodesChange}
-            onEdgesChange={isLocked ? undefined : onEdgesChange}
             onNodeClick={isLocked ? undefined : handleNodeClick}
             onEdgeClick={isLocked ? undefined : handleEdgeClick}
             onSelectionChange={(e) => {
               const selected = [...(e?.nodes || []), ...(e?.edges || [])];
-
-              // Avoid infinite loop by comparing with existing state
               const isSameSelection =
                 selected.length === selectedElements.length &&
                 selected.every(
@@ -1882,51 +1954,10 @@ const WorkflowEditor = forwardRef(
                 setSelectedElements(selected);
               }
             }}
-            // <-- capture selection
             selectionKeyCode="Shift"
-            multiSelectionKeyCode="Meta" // For Mac CMD key
+            multiSelectionKeyCode="Meta"
             onDrop={isLocked ? undefined : onDrop}
             onDragOver={isLocked ? undefined : onDragOver}
-            onConnect={
-              isLocked
-                ? showLockedToast
-                : (params) => {
-                  if (params.source === "stop") {
-                    toast.error("🚫 You cannot draw connections from the Stop node.", {
-                      position: "top-right",
-                      autoClose: 500,
-                      hideProgressBar: true,
-                      closeOnClick: true,
-                      pauseOnHover: true,
-                      draggable: true,
-                    });
-                    return;
-                  }
-                  addToUndoStack();
-                  setEdges((eds) =>
-                    addEdge(
-                      {
-                        ...params,
-                        sourceHandle: params.sourceHandle,
-                        targetHandle: params.targetHandle,
-                        animated: false,
-                        type: edgeStyle,
-                        markerEnd: { type: MarkerType.ArrowClosed },
-                        style: { strokeWidth: 2, stroke: "#333" },
-                        label: "",
-                        data: {
-                          shortPurposeForForward: "",
-                          purposeForForward: "",
-                          sourceHandle: params.sourceHandle,
-                          targetHandle: params.targetHandle,
-                        },
-                        labelStyle: { fill: "#fff", fontWeight: 700 },
-                      },
-                      eds
-                    )
-                  );
-                }
-            }
             onNodeMouseEnter={(_, node) => {
               clearTimeout(hoverTimeout);
               setHoveredNodeId(node.id);
@@ -1935,13 +1966,11 @@ const WorkflowEditor = forwardRef(
               hoverTimeout = setTimeout(() => setHoveredNodeId(null), 150);
             }}
             onNodeContextMenu={isLocked ? undefined : handleNodeRightClick}
-            onEdgeUpdate={onEdgeUpdate}
             onEdgeMouseEnter={(_, edge) => setHoveredEdgeId(edge.id)}
             onEdgeMouseLeave={() => setHoveredEdgeId(null)}
             defaultViewport={{ x: 0, y: 0, zoom: 1 }}
             style={{ background: "#F5F5F5" }}
           >
-
             <MiniMap
               nodeColor={(node) => {
                 switch (node.data?.nodeShape) {
@@ -2138,7 +2167,7 @@ const WorkflowEditor = forwardRef(
                   });
                   return;
                 }
-                addToUndoStack();
+                trackChange();
                 const updatedNodes = nodes.filter((n) => n.id !== nodeId);
                 const updatedEdges = edges.filter(
                   (e) => e.source !== nodeId && e.target !== nodeId
@@ -2183,7 +2212,7 @@ const WorkflowEditor = forwardRef(
                     purposeForForward: " ",
                   },
                 };
-                addToUndoStack();
+                trackChange();
                 setNodes((nds) => [...nds, newNode]);
                 setEdges((eds) => [...eds, newEdge]);
                 setNodeContextMenu(null);
@@ -2210,7 +2239,7 @@ const WorkflowEditor = forwardRef(
                     properties: { ...original.data.properties },
                   },
                 };
-                addToUndoStack();
+                trackChange();
                 setNodes((nds) => [...nds, duplicatedNode]);
                 setNodeContextMenu(null);
               }}
