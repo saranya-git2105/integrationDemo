@@ -1919,6 +1919,15 @@ const WorkflowEditor = forwardRef(
                 });
                 return;
               }
+
+              // Get source and target nodes
+              const sourceNode = nodes.find(n => n.id === params.source);
+              const targetNode = nodes.find(n => n.id === params.target);
+
+              // Determine if it's a forward or backward connection
+              const isForward = sourceNode.position.y <= targetNode.position.y;
+              const edgeColor = isForward ? "#22c55e" : "#ef4444"; // Green for forward, Red for backward
+
               trackChange();
               setEdges((eds) =>
                 addEdge(
@@ -1927,11 +1936,12 @@ const WorkflowEditor = forwardRef(
                     animated: false,
                     type: edgeStyle,
                     markerEnd: { type: MarkerType.ArrowClosed },
-                    style: { strokeWidth: 2, stroke: "#333" },
+                    style: { strokeWidth: 2, stroke: edgeColor },
                     label: "",
                     data: {
                       shortPurposeForForward: "",
                       purposeForForward: "",
+                      isForward: isForward,
                     },
                   },
                   eds

@@ -7,6 +7,7 @@
   background: #e2e8f0;
   flex-direction: row;
   position: relative;
+  font-family: 'Inter', sans-serif;
 }
 
 /* Sidebar styles */
@@ -20,6 +21,7 @@
   gap: 8px;
   overflow-y: auto;
   height: 100%;
+  font-family: 'Inter', sans-serif;
 }
 
 .workflow-editor-container .sidebar-title {
@@ -29,6 +31,7 @@
   color: #0284c7;
   font-size: 18px !important;
   font-weight: 600;
+  font-family: 'Inter', sans-serif;
 }
 
 .workflow-editor-container .sidebar-controls {
@@ -71,6 +74,7 @@
   margin: 0;
   color: #0ea5e9;
   font-size: 16px;
+  font-family: 'Inter', sans-serif;
 }
 
 .workflow-editor-container .node-type-item {
@@ -86,10 +90,12 @@
   border-radius: 20px;
   min-width: 44px;
   /* min-height: 44px; */
+  font-family: 'Inter', sans-serif;
 }
 
 .workflow-editor-container .node-type-item span {
   font-size: 16px !important;
+  font-family: 'Inter', sans-serif;
 }
 
 .workflow-editor-container .node-type-shape {
