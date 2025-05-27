@@ -324,7 +324,14 @@ const WorkflowEditor = forwardRef(
           targetHandle: "Step-top-target",
           type: "straight",
           markerEnd: { type: MarkerType.ArrowClosed },
-          style: { strokeWidth: 2, stroke: "#333" }
+          style: { strokeWidth: 2, stroke: "#333" },
+          label: "",
+          data: {
+            shortPurposeForForward: "",
+            purposeForForward: "",
+            sourceHandle,
+            targetHandle: "Step-top-target"
+          }
         });
       }
 
@@ -348,7 +355,14 @@ const WorkflowEditor = forwardRef(
         targetHandle: "Stop-top-target",
         type: "straight",
         markerEnd: { type: MarkerType.ArrowClosed },
-        style: { strokeWidth: 2, stroke: "#333" }
+        style: { strokeWidth: 2, stroke: "#333" },
+        label: "",
+        data: {
+          shortPurposeForForward: "",
+          purposeForForward: "",
+          sourceHandle: "Step-bottom-source",
+          targetHandle: "Stop-top-target"
+        }
       });
 
       return { nodes, edges };
@@ -1164,19 +1178,21 @@ const WorkflowEditor = forwardRef(
 
             // Get action name from ID
             const actionId = transition.ActionId || transition.label;
-
             const actionName = getActionNameFromId(actionId);
+
+            // Determine if it's a forward or backward connection
+            const isForward = sourceNode.position.y <= targetNode.position.y;
+            const edgeColor = isForward ? "#22c55e" : "#ef4444"; // Green for forward, Red for backward
 
             logger.info(`\n🔗 Creating Edge:`, {
               source: sourceId,
               target: targetId,
               fromHandle: transition.FromHandleId || transition.sourceHandle,
-
               toHandle: transition.ToHandleId || transition.targetHandle,
-
               actionName,
-
-              actionId
+              actionId,
+              isForward,
+              edgeColor
             });
 
             const sourceHandle = transition.FromHandleId || transition.sourceHandle ||
@@ -1194,14 +1210,15 @@ const WorkflowEditor = forwardRef(
               animated: false,
               type: "customSmooth",
               markerEnd: { type: MarkerType.ArrowClosed },
-              style: { strokeWidth: 2, stroke: "#333" },
+              style: { strokeWidth: 2, stroke: edgeColor },
               data: {
                 shortPurposeForForward: transition.ShortPurposeForForward || "",
                 purposeForForward: transition.PurposeForForward || "",
                 sourceHandle,
                 targetHandle,
                 actionName: actionName,
-                actionId: actionId
+                actionId: actionId,
+                isForward: isForward
               }
             });
           });
@@ -1739,6 +1756,27 @@ const WorkflowEditor = forwardRef(
           )}
         </div>
       );
+    };
+
+    // Add updateEdgeLabel function
+    const updateEdgeLabel = (actionName) => {
+      if (!selectedEdge) return;
+
+      setEdges((eds) =>
+        eds.map((edge) =>
+          edge.id === selectedEdge.id
+            ? {
+                ...edge,
+                label: actionName,
+                data: {
+                  ...edge.data,
+                  actionName: actionName,
+                },
+              }
+            : edge
+        )
+      );
+      setContextMenu(null);
     };
 
     return (
