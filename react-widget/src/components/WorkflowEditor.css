@@ -860,6 +860,12 @@
   height: 480px;
   max-height: 80vh;
   transition: all 0.3s cubic-bezier(.4,0,.2,1);
+  width: 300px;
+  right: 20px;
+  top: 80px;
+  height: 480px;
+  max-height: 80vh;
+  transition: all 0.3s cubic-bezier(.4,0,.2,1);
   background: #fff;
   box-shadow: -2px 0 8px rgba(0,0,0,0.12);
   z-index: 99999;
@@ -869,6 +875,7 @@
   flex-direction: column;
 }
 .drawer-header {
+  font-size: 18px;
   font-size: 18px;
   font-weight: bold;
   color: #1e293b;
@@ -954,6 +961,7 @@
   transition: background 0.2s;
   margin-bottom:20px;
 }
+
 
 /* Confirmation Modal Styles */
 .confirmation-modal-overlay {
