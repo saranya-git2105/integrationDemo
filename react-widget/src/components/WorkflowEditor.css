@@ -854,18 +854,17 @@
 
 /* Drawer styles for node properties */
 .drawer {
-  position: fixed;
-  top: 50px;
-  right: 0;
-  width: 350px;
-  height: calc(100vh - 100px);
+  width: 300px;
+  right: 20px;
+  top: 80px;
+  height: 480px;
+  max-height: 80vh;
+  transition: all 0.3s cubic-bezier(.4,0,.2,1);
   background: #fff;
   box-shadow: -2px 0 8px rgba(0,0,0,0.12);
   z-index: 99999;
   padding: 16px 20px;
   overflow-y: auto;
-  transition: right 0.3s;
-  border-left: 1px solid #e5e7eb;
   display: flex;
   flex-direction: column;
 }
@@ -878,6 +877,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+  margin-top: 40px;
 }
 .drawer-close {
   position: absolute;
@@ -942,20 +942,19 @@
   background: #fff;
 }
 .drawer button {
-  margin-top:30px;
+  margin-top:10px;
   padding: 7px 18px;
   border-radius: 5px;
   border: none;
   background: #6366f1;
   color: #fff;
   font-weight: 500;
-  font-size: 15px;
+  font-size: 12px;
   cursor: pointer;
   transition: background 0.2s;
+  margin-bottom:20px;
 }
-.drawer button:hover {
-  background: #4338ca;
-}
+
 /* Confirmation Modal Styles */
 .confirmation-modal-overlay {
   position: fixed;
@@ -1036,7 +1035,27 @@
   opacity: 0.9;
 }
 
+.edit-button {
+  font-size: 12px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-weight: 500;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  margin-top: 0px;
+  
+}
 
+.edit-button:hover {
+  background: #e2e8f0;
+  border-color: #cbd5e1;
+}
 
 @media screen and (max-width: 1250px) {
   .workflow-editor-container .workflow-sidebar {

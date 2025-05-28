@@ -21,7 +21,7 @@ import ReactFlow, {
   applyEdgeChanges,
 } from "reactflow";
 import { ControlButton } from "reactflow";
-import { FaLock, FaUnlock } from "react-icons/fa";
+import { FaLock, FaUnlock, FaMinimize, FaMaximize } from "react-icons/fa";
 import "reactflow/dist/style.css";
 import Modal from "react-modal";
 import { ToastContainer, toast } from 'react-toastify';
@@ -41,6 +41,8 @@ import {
   FiRotateCcw,
   FiRefreshCw,
   FiGrid,
+  FiMinimize,
+  FiMaximize,
 } from "react-icons/fi";
 
 import "./WorkflowEditor.css";
@@ -129,6 +131,7 @@ const WorkflowEditor = forwardRef(
     const [drawerNodeProperties, setDrawerNodeProperties] = useState({});
     const [confirmModalOpen, setConfirmModalOpen] = useState(false);
     const [pendingTemplateAction, setPendingTemplateAction] = useState(null);
+    const [isFullscreen, setIsFullscreen] = useState(false);
 
     // Add template workflows
     const templateWorkflows = useMemo(
@@ -1793,6 +1796,31 @@ const WorkflowEditor = forwardRef(
       setContextMenu(null);
     };
 
+    // Add fullscreen toggle handler
+    const toggleFullscreen = () => {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen();
+        setIsFullscreen(true);
+      } else {
+        if (document.exitFullscreen) {
+          document.exitFullscreen();
+          setIsFullscreen(false);
+        }
+      }
+    };
+
+    // Add fullscreen change event listener
+    useEffect(() => {
+      const handleFullscreenChange = () => {
+        setIsFullscreen(!!document.fullscreenElement);
+      };
+
+      document.addEventListener('fullscreenchange', handleFullscreenChange);
+      return () => {
+        document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      };
+    }, []);
+
     return (
       <div className="workflow-editor-container">
         <ToastContainer
@@ -2071,7 +2099,7 @@ const WorkflowEditor = forwardRef(
               position="top-right"
               showInteractive={false}
               style={{
-                zIndex: 10, // Make sure it shows above everything
+                zIndex: 10,
                 marginRight: 10,
                 marginTop: 469,
               }}
@@ -2092,6 +2120,12 @@ const WorkflowEditor = forwardRef(
                 }}
               >
                 <FiGrid color="#333" />
+              </ControlButton>
+              <ControlButton
+                title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
+                onClick={toggleFullscreen}
+              >
+                {isFullscreen ? <FiMinimize color="#333" /> : <FiMaximize color="#333" />}
               </ControlButton>
             </Controls>
             {backgroundVariant !== "solid" && (
@@ -2321,10 +2355,12 @@ const WorkflowEditor = forwardRef(
 
         {/* Drawer for node properties */}
         {drawerOpen && drawerNode && (
-          <div className="drawer">
+          <div
+            className={`drawer${isFullscreen ? ' fullscreen-drawer' : ''}`}
+          >
             <div className="drawer-close" onClick={() => setDrawerOpen(false)}>&times;</div>
-            <div className="drawer-actions">
-              <div className="drawer-header">Step Properties</div>
+            <div className="drawer-header">
+              Step Properties
               {!editMode && (
                 <button 
                   onClick={() => {
