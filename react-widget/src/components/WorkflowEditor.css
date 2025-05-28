@@ -870,12 +870,14 @@
   flex-direction: column;
 }
 .drawer-header {
-  font-size: 22px;
+  font-size: 18px;
   font-weight: bold;
   color: #1e293b;
-  margin-bottom: 0;
-  margin-top: 0;
   text-align: left;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
 }
 .drawer-close {
   position: absolute;
@@ -1218,5 +1220,20 @@
 }
 .custom-toast-body {
   color: #fff !important;
+}
+
+.edit-button {
+  font-size: 14px;
+  padding: 2px 12px;
+  border-radius: 4px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-weight: 500;
+  height: 28px;
+  display: flex;
+  align-items: center;
 }
 
