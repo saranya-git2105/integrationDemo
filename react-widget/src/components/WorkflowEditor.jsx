@@ -334,7 +334,6 @@ const WorkflowEditor = forwardRef(
           }
         });
       }
-
       // Add Stop node
       const stopY = baseY + (count + 1) * yIncrement;
       const stopX = 192.356146179402 + ((count - 1) * 46.81943521594684);
@@ -345,7 +344,6 @@ const WorkflowEditor = forwardRef(
         position: { x: stopX, y: stopY },
         data: { label: "Stop", nodeShape: "Stop", properties: { StepName: "Stop" } }
       });
-
       // Add final edge to Stop
       edges.push({
         id: `step${count}-stop`,
@@ -364,22 +362,38 @@ const WorkflowEditor = forwardRef(
           targetHandle: "Stop-top-target"
         }
       });
-
       return { nodes, edges };
     };
-
     // Add this function to handle dynamic template loading
-    const loadDynamicTemplate = () => {
-      if (isLocked) return showLockedToast();
+    const loadDynamicTemplate = (e) => {
+      // Prevent any default behavior or event bubbling
+      e?.preventDefault();
+      e?.stopPropagation();
 
-      // Check if there are existing nodes
+      // Show toast immediately if there are existing nodes
       if (nodes.length > 0) {
-        // Just show confirmation modal without generating template
-        setConfirmModalOpen(true);
+        // Force immediate toast display
+        toast.error("Please clear the canvas before generating a new template.", {
+          position: "top-right",
+          autoClose: 500,
+          hideProgressBar: true,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+          onOpen: () => {
+            // Force a re-render to ensure toast is visible
+            setNodes([...nodes]);
+          }
+        });
         return;
       }
 
-      // If no nodes exist, proceed directly
+      if (isLocked) {
+        showLockedToast();
+        return;
+      }
+
+      // Generate and apply template
       const template = generateDynamicTemplate(nodeCount);
       setNodes([]);
       setEdges([]);
@@ -411,7 +425,7 @@ const WorkflowEditor = forwardRef(
         );
 
         if (!startNodeExists && actionType !== "view") {
-          toast.warning("⚠️ Please drag and place a Start node first before saving or viewing the workflow.", {
+          toast.warning("Please drag and place a Start node first before saving or viewing the workflow.", {
             position: "top-right",
             autoClose: 500,
             hideProgressBar: true,
@@ -607,7 +621,7 @@ const WorkflowEditor = forwardRef(
           const currentEdges = getEdges();
           logger.info("Current nodes from Angular call:", currentNodes);
           if (currentNodes.length === 0) {
-            toast.warning("⚠️ Please add at least one node to the workflow before viewing JSON.", {
+            toast.warning(" Please add at least one node to the workflow before viewing JSON.", {
               position: "top-right",
               autoClose: 500,
               hideProgressBar: true,
@@ -1884,7 +1898,14 @@ const WorkflowEditor = forwardRef(
                 className="node-counter-input"
               />
               <button
-                onClick={loadDynamicTemplate}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  // Force immediate execution
+                  Promise.resolve().then(() => {
+                    loadDynamicTemplate(e);
+                  });
+                }}
                 className="generate-template-button"
               >
                 Generate Template
@@ -1947,7 +1968,7 @@ const WorkflowEditor = forwardRef(
             onConnect={(params) => {
               if (isLocked) return showLockedToast();
               if (params.source === "stop") {
-                toast.error("🚫 You cannot draw connections from the Stop node.", {
+                toast.error(" You cannot draw connections from the Stop node.", {
                   position: "top-right",
                   autoClose: 500,
                   hideProgressBar: true,
@@ -2205,7 +2226,7 @@ const WorkflowEditor = forwardRef(
                 const nodeId = nodeContextMenu.node.id;
                 const nodeShape = nodeContextMenu.node.data.nodeShape;
                 if (nodeShape === "Start" || nodeShape === "Stop") {
-                  toast.error("🚫 Start and Stop nodes cannot be deleted.", {
+                  toast.error(" Start and Stop nodes cannot be deleted.", {
                     position: "top-right",
                     autoClose: 500,
                     hideProgressBar: true,
