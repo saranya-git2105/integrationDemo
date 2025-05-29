@@ -863,7 +863,7 @@
   background: #fff;
   box-shadow: -2px 0 8px rgba(0,0,0,0.12);
   z-index: 100;
-  padding: 16px 20px;
+  padding: 90px 20px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
@@ -884,7 +884,7 @@
 }
 .drawer-close {
   position: absolute;
-  top: 18px;
+  top: 60px;
   right: 24px;
   cursor: pointer;
   font-size: 28px;
@@ -1045,9 +1045,9 @@
   font-size: 12px;
   padding: 2px 6px;
   border-radius: 4px;
-  border: 1px solid #e2e8f0;
-  background: #f8fafc;
-  color: #475569;
+  border: 1px solid #4B49AC !important;
+  background: #4B49AC !important;
+  color: #fff !important;
   cursor: pointer;
   transition: all 0.2s;
   font-weight: 500;
@@ -1056,11 +1056,6 @@
   align-items: center;
   margin-top: 0px;
   
-}
-
-.edit-button:hover {
-  background: #e2e8f0;
-  border-color: #cbd5e1;
 }
 
 @media screen and (max-width: 1250px) {
@@ -1253,7 +1248,7 @@
   border-radius: 4px;
   border: 1px solid #e2e8f0;
   background: #f8fafc;
-  color: #475569;
+  color: #4b49ac;
   cursor: pointer;
   transition: all 0.2s;
   font-weight: 500;

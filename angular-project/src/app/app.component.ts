@@ -225,7 +225,8 @@ export class AppComponent implements AfterViewInit {
         save: true,
         download: false,
         view: true
-      }
+      },
+      showTemplateWorkflow: true
     });
 
     try {

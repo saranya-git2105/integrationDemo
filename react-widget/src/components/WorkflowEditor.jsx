@@ -1912,37 +1912,39 @@ const WorkflowEditor = forwardRef(
           </div>
 
           {/* Add template workflows */}
-          <div className="template-workflows-container">
-            <div className="desktop-only">
-              <p className="template-workflows-title">🎯 Dynamic Template</p>
+          {config?.showTemplateWorkflow && (
+            <div className="template-workflows-container">
+              <div className="desktop-only">
+                <p className="template-workflows-title">🎯 Dynamic Template</p>
+              </div>
+              <div className="dynamic-template-controls">
+                <input
+                  type="number"
+                  min="1"
+                  max="10"
+                  value={nodeCount}
+                  onChange={(e) => setNodeCount(Math.min(10, Math.max(1, parseInt(e.target.value) || 1)))}
+                  className="node-counter-input"
+                />
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    // Force immediate execution
+                    Promise.resolve().then(() => {
+                      loadDynamicTemplate(e);
+                    });
+                  }}
+                  className="generate-template-button"
+                >
+                  Generate Template
+                </button>
+              </div>
+              <div className="dynamic-template-description">
+                Create a template with {nodeCount} step{nodeCount !== 1 ? 's' : ''}
+              </div>
             </div>
-            <div className="dynamic-template-controls">
-              <input
-                type="number"
-                min="1"
-                max="10"
-                value={nodeCount}
-                onChange={(e) => setNodeCount(Math.min(10, Math.max(1, parseInt(e.target.value) || 1)))}
-                className="node-counter-input"
-              />
-              <button
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  // Force immediate execution
-                  Promise.resolve().then(() => {
-                    loadDynamicTemplate(e);
-                  });
-                }}
-                className="generate-template-button"
-              >
-                Generate Template
-              </button>
-            </div>
-            <div className="dynamic-template-description">
-              Create a template with {nodeCount} step{nodeCount !== 1 ? 's' : ''}
-            </div>
-          </div>
+          )}
 
           {/* Action Buttons */}
           {sidebarButtons.map(({ label, icon, action, color }) => (
