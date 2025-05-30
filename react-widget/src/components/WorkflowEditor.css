@@ -863,12 +863,21 @@
   background: #fff;
   box-shadow: -2px 0 8px rgba(0,0,0,0.12);
   z-index: 100;
-  padding: 90px 20px;
+  padding: 50px 15px 15px 15px;
   overflow-y: auto;
   display: flex;
+  align-items: center;
+  justify-content: flex-start;
   flex-direction: column;
   transition: all 0.3s cubic-bezier(.4,0,.2,1);
   border-left: 1px solid #eee;
+}
+.drawer-parent-section{
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  flex-direction: column;
+  width: 100%;
 }
 .drawer-header {
   font-size: 18px;
@@ -880,14 +889,15 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  margin-top: 40px;
+  margin-top: 0;
+  width: 100%;
 }
 .drawer-close {
   position: absolute;
-  top: 60px;
-  right: 24px;
+  top: 10px;
+  right: 10px;
   cursor: pointer;
-  font-size: 28px;
+  font-size: 30px;
   color: #888;
   background: none;
   border: none;
@@ -901,13 +911,22 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 10px 0;
+  gap: 20px 0;
+  width: 100%;
+  margin-top: 20px;
 }
 .drawer-label {
   font-weight: 500;
-  margin-top: 14px;
-  margin-bottom: 2px;
+  margin-top: 0;
+  margin-bottom: 3px;
   color: #374151;
+}
+.drawer-label-values{
+
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 5px;
+  margin-Top: 5px;
 }
 .drawer-actions {
   display: flex;
@@ -915,28 +934,28 @@
   justify-content: space-between;
   gap: 12px;
   margin-top: 0;
-  margin-bottom: 18px;
-  padding-right: 48px;
+  margin-bottom: 0;
+  padding-right: 0;
 }
 .drawer-actions .modal-button-save {
   border: 1px solid #bcbcbc;
     color: #fff;
-    margin-top:30px;
+    margin-top:0;
    
 }
 .drawer-actions .modal-button-cancel {
   border: 1px solid #bcbcbc;
     color: #727272;
     background-color: #fff;
-    margin-top:30px;
+    margin-top:0;
 }
 .drawer input[type="text"] {
-  width: 95%;
-  padding: 7px 10px;
+  width: 100%;
+  padding: 0 8px;
   border: 1px solid #d1d5db;
   border-radius: 5px;
   font-size: 15px;
-  margin-bottom: 2px;
+  margin-bottom: 0;
   background: #fff;
   color: #222;
   transition: border 0.2s;
@@ -947,20 +966,29 @@
   background: #fff;
 }
 .drawer button {
-  margin-top:10px;
+  margin-top:0;
   padding: 7px 18px;
   border-radius: 5px;
   border: none;
   background: #6366f1;
   color: #fff;
   font-weight: 500;
-  font-size: 12px;
+  font-size: 14px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
   cursor: pointer;
   transition: background 0.2s;
-  margin-bottom:20px;
+  margin-bottom:0;
+  min-width: 80px;
 }
 
-
+.drawer-form-elements-height{
+  height: 36px !important;
+}
+.drawer-form-elements-height .modal-select__control{
+  height: 100%;
+}
 /* Confirmation Modal Styles */
 .confirmation-modal-overlay {
   position: fixed;

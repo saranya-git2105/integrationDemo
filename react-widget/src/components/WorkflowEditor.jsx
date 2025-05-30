@@ -898,7 +898,7 @@ const WorkflowEditor = forwardRef(
         type: "custom",
         position,
         draggable: true,
-        data: { label: nodeType, nodeShape: nodeType, properties: {} },
+        data: { label: nodeType, nodeShape: nodeType, properties: { StepName: nodeType } },
       };
 
       setNodes((nds) => [...nds, newNode]);
@@ -1913,37 +1913,37 @@ const WorkflowEditor = forwardRef(
 
           {/* Add template workflows */}
           {config?.showTemplateWorkflow && (
-            <div className="template-workflows-container">
-              <div className="desktop-only">
-                <p className="template-workflows-title">🎯 Dynamic Template</p>
-              </div>
-              <div className="dynamic-template-controls">
-                <input
-                  type="number"
-                  min="1"
-                  max="10"
-                  value={nodeCount}
-                  onChange={(e) => setNodeCount(Math.min(10, Math.max(1, parseInt(e.target.value) || 1)))}
-                  className="node-counter-input"
-                />
-                <button
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    // Force immediate execution
-                    Promise.resolve().then(() => {
-                      loadDynamicTemplate(e);
-                    });
-                  }}
-                  className="generate-template-button"
-                >
-                  Generate Template
-                </button>
-              </div>
-              <div className="dynamic-template-description">
-                Create a template with {nodeCount} step{nodeCount !== 1 ? 's' : ''}
-              </div>
+          <div className="template-workflows-container">
+            <div className="desktop-only">
+              <p className="template-workflows-title">🎯 Dynamic Template</p>
             </div>
+            <div className="dynamic-template-controls">
+              <input
+                type="number"
+                min="1"
+                max="10"
+                value={nodeCount}
+                onChange={(e) => setNodeCount(Math.min(10, Math.max(1, parseInt(e.target.value) || 1)))}
+                className="node-counter-input"
+              />
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  // Force immediate execution
+                  Promise.resolve().then(() => {
+                    loadDynamicTemplate(e);
+                  });
+                }}
+                className="generate-template-button"
+              >
+                Generate Template
+              </button>
+            </div>
+            <div className="dynamic-template-description">
+              Create a template with {nodeCount} step{nodeCount !== 1 ? 's' : ''}
+            </div>
+          </div>
           )}
 
           {/* Action Buttons */}
@@ -2148,6 +2148,7 @@ const WorkflowEditor = forwardRef(
           {drawerOpen && drawerNode && (
             <div className={`drawer${isFullscreen ? ' fullscreen-drawer' : ''}`}>
               <div className="drawer-close" onClick={() => setDrawerOpen(false)}>&times;</div>
+              <div class="drawer-parent-section">
               <div className="drawer-header">
                 Step Properties
                 {!editMode && (
@@ -2155,7 +2156,7 @@ const WorkflowEditor = forwardRef(
                     onClick={() => {
                       setEditMode(true);
                     }}
-                    className="edit-button"
+                    className="edit-button drawer-form-elements-height"
                   >
                     Edit
                   </button>
@@ -2164,56 +2165,71 @@ const WorkflowEditor = forwardRef(
               <div className="drawer-content">
                 {!editMode ? (
                   <>
+                  <div class="drawer-form-group">
                     <div className="drawer-label">Step Name :
                     {drawerNodeProperties.StepName || drawerNode.data.label}</div>
+                    </div>
+                   <div class="drawer-form-group">
                     <div className="drawer-label">Step Actions :
+                    <div className="drawer-label-values">
                     {(drawerNodeProperties.StepActions || []).map((action, idx) => (
                       <span
                         key={idx}
                         style={{
                           background: '#e2e8f0',
                           color: '#1e293b',
-                          padding: '2px 8px',
+                          padding: '7px 14px',
                           borderRadius: '12px',
-                          fontSize: '11px',
+                          fontSize: '12px',
                           display: 'inline-block',
                           whiteSpace: 'nowrap',
+                          marginRight: '5px 0'
                         }}
                       >
                         {action}
                       </span>
                     ))}
                     </div>
+                    </div>
+                    </div>
+                    <div class="drawer-form-group">
                     <div className="drawer-label">Step Users :
+                      <div className="drawer-label-values">
                     {(drawerNodeProperties.UserNames || []).map((user, idx) => (
                       <span
                         key={idx}
                         style={{
                           background: '#e2e8f0',
                           color: '#1e293b',
-                          padding: '2px 8px',
+                          padding: '7px 14px',
                           borderRadius: '12px',
-                          fontSize: '11px',
+                          fontSize: '12px',
                           display: 'inline-block',
                           whiteSpace: 'nowrap',
+                          marginRight: '5px 0'
                         }}
                       >
                         {user}
                       </span>
                     ))}
+                      </div>
+                    </div>
                     </div>
                   </>
                 ) : (
                   <>
+                  <div class="drawer-form-group">
                     <div className="drawer-label">Step Name :</div>
                     <input
                       type="text"
                       name="StepName"
                       value={drawerNodeProperties.StepName || ""}
                       onChange={updateDrawerNodeProperties}
-                      className="modal-input"
+                      className="modal-input drawer-form-elements-height"
                      
                     />
+                    </div>
+                    <div class="drawer-form-group">
                     <div className="drawer-label">Step Actions :</div>
                     <Select
                       isMulti
@@ -2250,7 +2266,7 @@ const WorkflowEditor = forwardRef(
                           }));
                         }
                       }}
-                      className="modal-select"
+                      className="modal-select drawer-form-elements-height"
                       classNamePrefix="modal-select"
                       components={{
                         Option: ({ children, ...props }) => {
@@ -2316,6 +2332,8 @@ const WorkflowEditor = forwardRef(
                         },
                       }}
                     />
+                    </div>
+                    <div class="drawer-form-group">
                     <div className="drawer-label">Step Users :</div>
                     <Select
                       isMulti
@@ -2351,7 +2369,7 @@ const WorkflowEditor = forwardRef(
                           }));
                         }
                       }}
-                      className="modal-select"
+                      className="modal-select drawer-form-elements-height"
                       classNamePrefix="modal-select"
                       components={{
                         Option: ({ children, ...props }) => {
@@ -2417,13 +2435,15 @@ const WorkflowEditor = forwardRef(
                         },
                       }}
                     />
+                    </div>
                     <div className="drawer-actions">
                       
-                      <button onClick={() => setEditMode(false)} className="modal-button-cancel">Cancel</button>
-                      <button onClick={saveDrawerNodeProperties} className="modal-button-save" style={{ background: saveButtonColor }}>Save</button>
+                      <button onClick={() => setEditMode(false)} className="modal-button-cancel drawer-form-elements-height">Cancel</button>
+                      <button onClick={saveDrawerNodeProperties} className="modal-button-save drawer-form-elements-height" style={{ background: saveButtonColor }}>Save</button>
                     </div>
                   </>
                 )}
+              </div>
               </div>
             </div>
           )}
