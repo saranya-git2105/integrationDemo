@@ -817,18 +817,21 @@
 
 .dynamic-template-controls {
   display: flex;
+  justify-content: center;
   gap: 10px;
   margin: 10px 0;
   align-items: center;
 }
-
+.node-counter-input,.generate-template-button{
+height: 30px;
+font-size: 14px;
+}
 .node-counter-input {
-  width: 60px;
-  padding: 5px;
+  width: 70px;
+  padding: 0 5px;
   border: 1px solid #ced4da;
   border-radius: 4px;
   text-align: center;
-  font-size: 14px;
 }
 
 .generate-template-button {
@@ -838,8 +841,8 @@
   border: none;
   border-radius: 4px;
   cursor: pointer;
-  font-size: 14px;
   transition: background-color 0.2s;
+  width: 55%;
 }
 
 .generate-template-button:hover {
@@ -1165,7 +1168,6 @@
     gap: 10px;
     align-items: center;
     justify-content: center;
-    overflow: hidden;
   }
 
   .workflow-editor-container .sidebar-title,
@@ -1233,7 +1235,25 @@
   .node-properties-modal {
     width: 100% !important;
   }
-
+  .template-workflows-container{
+    width: 100%;
+    gap: 0;
+  }
+  .node-counter-input,.generate-template-button{
+height: 34px;
+font-size: 18px;
+}
+.generate-template-button{
+  width: 100px;
+}
+.dynamic-template-description{
+  text-align: center;
+}
+.drawer{
+  width: 95%;
+  border-left: none;
+  box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.1);
+}
 }
 
 /* Small Mobile Responsive Styles */

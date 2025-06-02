@@ -1912,7 +1912,8 @@ const WorkflowEditor = forwardRef(
           </div>
 
           {/* Add template workflows */}
-          {config?.showTemplateWorkflow && (
+         {config?.showTemplateWorkflow && (
+
           <div className="template-workflows-container">
             <div className="desktop-only">
               <p className="template-workflows-title">🎯 Dynamic Template</p>
@@ -1937,15 +1938,14 @@ const WorkflowEditor = forwardRef(
                 }}
                 className="generate-template-button"
               >
-                Generate Template
+                Generate
               </button>
             </div>
             <div className="dynamic-template-description">
               Create a template with {nodeCount} step{nodeCount !== 1 ? 's' : ''}
             </div>
           </div>
-          )}
-
+         )}
           {/* Action Buttons */}
           {sidebarButtons.map(({ label, icon, action, color }) => (
             <button
