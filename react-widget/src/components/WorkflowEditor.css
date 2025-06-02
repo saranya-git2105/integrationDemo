@@ -863,7 +863,7 @@
   background: #fff;
   box-shadow: -2px 0 8px rgba(0,0,0,0.12);
   z-index: 100;
-  padding: 50px 15px 15px 15px;
+  padding: 15px;
   overflow-y: auto;
   display: flex;
   align-items: center;
@@ -951,7 +951,7 @@
 }
 .drawer input[type="text"] {
   width: 100%;
-  padding: 0 8px;
+  padding: 0 10px;
   border: 1px solid #d1d5db;
   border-radius: 5px;
   font-size: 15px;
@@ -1083,9 +1083,24 @@
   display: flex;
   align-items: center;
   margin-top: 0px;
-  
 }
 
+.editor-tips-section{
+    background: #ffffff;
+  border: 1px solid #ffffff;
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  font-size: 14px;
+  color: #000000;
+  line-height: 1.6;
+}
+.editor-tips-section ul{
+  list-style-type: disc !important;
+}
+.modal-select__value-container{
+  font-size: 15px;
+}
 @media screen and (max-width: 1250px) {
   .workflow-editor-container .workflow-sidebar {
     width: 200px;

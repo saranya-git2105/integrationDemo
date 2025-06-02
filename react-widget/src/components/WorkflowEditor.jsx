@@ -1959,16 +1959,7 @@ const WorkflowEditor = forwardRef(
             </button>
           ))}
 
-          <div style={{
-            background: '#ffffff',
-            border: '1px solid #ffffff',
-            borderRadius: '8px',
-            padding: '10px 12px',
-            marginBottom: '8px',
-            fontSize: '14px',
-            color: '#000000',
-            lineHeight: 1.6
-          }}>
+          <div class="editor-tips-section">
             <b>Editor Tips:</b>
             <ul style={{margin: '6px 0 0 16px', padding: 0}}>
               <li>Drag and drop nodes from <b>Node Types</b> to the canvas.</li>
@@ -2147,303 +2138,293 @@ const WorkflowEditor = forwardRef(
           {/* Drawer for node properties */}
           {drawerOpen && drawerNode && (
             <div className={`drawer${isFullscreen ? ' fullscreen-drawer' : ''}`}>
-              <div className="drawer-close" onClick={() => setDrawerOpen(false)}>&times;</div>
               <div class="drawer-parent-section">
-              <div className="drawer-header">
-                Step Properties
-                {!editMode && (
-                  <button 
-                    onClick={() => {
-                      setEditMode(true);
-                    }}
-                    className="edit-button drawer-form-elements-height"
-                  >
-                    Edit
-                  </button>
-                )}
-              </div>
-              <div className="drawer-content">
-                {!editMode ? (
-                  <>
-                  <div class="drawer-form-group">
-                    <div className="drawer-label">Step Name :
-                    {drawerNodeProperties.StepName || drawerNode.data.label}</div>
-                    </div>
-                   <div class="drawer-form-group">
-                    <div className="drawer-label">Step Actions :
-                    <div className="drawer-label-values">
-                    {(drawerNodeProperties.StepActions || []).map((action, idx) => (
-                      <span
-                        key={idx}
-                        style={{
-                          background: '#e2e8f0',
-                          color: '#1e293b',
-                          padding: '7px 14px',
-                          borderRadius: '12px',
-                          fontSize: '12px',
-                          display: 'inline-block',
-                          whiteSpace: 'nowrap',
-                          marginRight: '5px 0'
-                        }}
-                      >
-                        {action}
-                      </span>
-                    ))}
-                    </div>
-                    </div>
-                    </div>
-                    <div class="drawer-form-group">
-                    <div className="drawer-label">Step Users :
-                      <div className="drawer-label-values">
-                    {(drawerNodeProperties.UserNames || []).map((user, idx) => (
-                      <span
-                        key={idx}
-                        style={{
-                          background: '#e2e8f0',
-                          color: '#1e293b',
-                          padding: '7px 14px',
-                          borderRadius: '12px',
-                          fontSize: '12px',
-                          display: 'inline-block',
-                          whiteSpace: 'nowrap',
-                          marginRight: '5px 0'
-                        }}
-                      >
-                        {user}
-                      </span>
-                    ))}
+                <div className="drawer-header">
+                  Step Properties
+                </div>
+                <div className="drawer-content">
+                  {!editMode ? (
+                    <>
+                      <div class="drawer-form-group">
+                        <div className="drawer-label">Step Name :
+                          {drawerNodeProperties.StepName || drawerNode.data.label}</div>
                       </div>
-                    </div>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                  <div class="drawer-form-group">
-                    <div className="drawer-label">Step Name :</div>
-                    <input
-                      type="text"
-                      name="StepName"
-                      value={drawerNodeProperties.StepName || ""}
-                      onChange={updateDrawerNodeProperties}
-                      className="modal-input drawer-form-elements-height"
-                     
-                    />
-                    </div>
-                    <div class="drawer-form-group">
-                    <div className="drawer-label">Step Actions :</div>
-                    <Select
-                      isMulti
-                      closeMenuOnSelect={false}
-                      hideSelectedOptions={false}
-                      options={[
-                        { label: "Select All", value: "__SELECT_ALL__" },
-                        ...stepActionsOptions.map(action => ({
-                          label: action.ActionName,
-                          value: action.ActionName,
-                        }))
-                      ]}
-                      value={
-                        (drawerNodeProperties.StepActions || []).map(actionName => ({
-                          label: actionName,
-                          value: actionName,
-                        })) || []
-                      }
-                      onChange={selected => {
-                        const hasSelectAll = selected?.some(item => item.value === "__SELECT_ALL__");
-                        const allActionNames = stepActionsOptions.map(action => action.ActionName);
-                        const currentActionNames = drawerNodeProperties.StepActions || [];
-                        if (hasSelectAll) {
-                          // If "Select All" was clicked, check if all are selected
-                          const allSelected = allActionNames.every(name => currentActionNames.includes(name));
-                          setDrawerNodeProperties(prev => ({
-                            ...prev,
-                            StepActions: allSelected ? [] : allActionNames,
-                          }));
-                        } else {
-                          setDrawerNodeProperties(prev => ({
-                            ...prev,
-                            StepActions: selected ? selected.map(item => item.value) : [],
-                          }));
-                        }
-                      }}
-                      className="modal-select drawer-form-elements-height"
-                      classNamePrefix="modal-select"
-                      components={{
-                        Option: ({ children, ...props }) => {
-                          const { isSelected, isFocused, innerRef, innerProps, data } = props;
-                          if (data.value === "__SELECT_ALL__") {
+                      <div class="drawer-form-group">
+                        <div className="drawer-label">Step Actions :
+                          <div className="drawer-label-values">
+                            {(drawerNodeProperties.StepActions || []).map((action, idx) => (
+                              <span
+                                key={idx}
+                                style={{
+                                  background: '#e2e8f0',
+                                  color: '#1e293b',
+                                  padding: '7px 14px',
+                                  borderRadius: '12px',
+                                  fontSize: '12px',
+                                  display: 'inline-block',
+                                  whiteSpace: 'nowrap',
+                                  marginRight: '5px 0'
+                                }}
+                              >
+                                {action}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                      <div class="drawer-form-group">
+                        <div className="drawer-label">Step Users :
+                          <div className="drawer-label-values">
+                            {(drawerNodeProperties.UserNames || []).map((user, idx) => (
+                              <span
+                                key={idx}
+                                style={{
+                                  background: '#e2e8f0',
+                                  color: '#1e293b',
+                                  padding: '7px 14px',
+                                  borderRadius: '12px',
+                                  fontSize: '12px',
+                                  display: 'inline-block',
+                                  whiteSpace: 'nowrap',
+                                  marginRight: '5px 0'
+                                }}
+                              >
+                                {user}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="drawer-actions">
+                        <button onClick={() => setDrawerOpen(false)} className="modal-button-cancel drawer-form-elements-height">Close</button>
+                        <button onClick={() => setEditMode(true)} className="modal-button-save drawer-form-elements-height" style={{ background: saveButtonColor }}>Edit</button>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div class="drawer-form-group">
+                        <div className="drawer-label">Step Name :</div>
+                        <input
+                          type="text"
+                          name="StepName"
+                          value={drawerNodeProperties.StepName || ""}
+                          onChange={updateDrawerNodeProperties}
+                          className="modal-input drawer-form-elements-height"
+                        />
+                      </div>
+                      <div class="drawer-form-group">
+                        <div className="drawer-label">Step Actions :</div>
+                        <Select
+                          isMulti
+                          closeMenuOnSelect={false}
+                          hideSelectedOptions={false}
+                          options={[
+                            { label: "Select All", value: "__SELECT_ALL__" },
+                            ...stepActionsOptions.map(action => ({
+                              label: action.ActionName,
+                              value: action.ActionName,
+                            }))
+                          ]}
+                          value={
+                            (drawerNodeProperties.StepActions || []).map(actionName => ({
+                              label: actionName,
+                              value: actionName,
+                            })) || []
+                          }
+                          onChange={selected => {
+                            const hasSelectAll = selected?.some(item => item.value === "__SELECT_ALL__");
                             const allActionNames = stepActionsOptions.map(action => action.ActionName);
                             const currentActionNames = drawerNodeProperties.StepActions || [];
-                            const allSelected = allActionNames.every(name => currentActionNames.includes(name));
-                            return (
-                              <div
-                                ref={innerRef}
-                                {...innerProps}
-                                className="multi-value-option"
-                                style={{
-                                  backgroundColor: isFocused ? '#f0f0f0' : 'white',
-                                  fontWeight: 'bold',
-                                  borderBottom: '1px solid #e5e5e5'
-                                }}
-                              >
-                                <input
-                                  type="checkbox"
-                                  checked={allSelected}
-                                  readOnly
-                                  className="multi-value-checkbox"
-                                />
-                                <div>{children}</div>
-                              </div>
-                            );
+                            if (hasSelectAll) {
+                              const allSelected = allActionNames.every(name => currentActionNames.includes(name));
+                              setDrawerNodeProperties(prev => ({
+                                ...prev,
+                                StepActions: allSelected ? [] : allActionNames,
+                              }));
+                            } else {
+                              setDrawerNodeProperties(prev => ({
+                                ...prev,
+                                StepActions: selected ? selected.map(item => item.value) : [],
+                              }));
+                            }
+                          }}
+                          className="modal-select drawer-form-elements-height"
+                          classNamePrefix="modal-select"
+                          components={{
+                            Option: ({ children, ...props }) => {
+                              const { isSelected, isFocused, innerRef, innerProps, data } = props;
+                              if (data.value === "__SELECT_ALL__") {
+                                const allActionNames = stepActionsOptions.map(action => action.ActionName);
+                                const currentActionNames = drawerNodeProperties.StepActions || [];
+                                const allSelected = allActionNames.every(name => currentActionNames.includes(name));
+                                return (
+                                  <div
+                                    ref={innerRef}
+                                    {...innerProps}
+                                    className="multi-value-option"
+                                    style={{
+                                      backgroundColor: isFocused ? '#f0f0f0' : 'white',
+                                      fontWeight: 'bold',
+                                      borderBottom: '1px solid #e5e5e5'
+                                    }}
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={allSelected}
+                                      readOnly
+                                      className="multi-value-checkbox"
+                                    />
+                                    <div>{children}</div>
+                                  </div>
+                                );
+                              }
+                              return (
+                                <div
+                                  ref={innerRef}
+                                  {...innerProps}
+                                  className="multi-value-option"
+                                  style={{
+                                    backgroundColor: isFocused ? '#f0f0f0' : 'white',
+                                  }}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={isSelected}
+                                    readOnly
+                                    className="multi-value-checkbox"
+                                  />
+                                  <div>{children}</div>
+                                </div>
+                              );
+                            },
+                            MultiValue: ({ index, getValue, ...props }) => {
+                              const values = getValue();
+                              const maxToShow = 2;
+                              const length = values.length;
+                              if (index >= maxToShow) return null;
+                              if (index === 1 && length > maxToShow) {
+                                return (
+                                  <>
+                                    <div className="multi-value-container">{props.data.label}</div>
+                                    <div className="count-number">+{length - maxToShow}</div>
+                                  </>
+                                );
+                              }
+                              return <div className="multi-value-container">{props.data.label}</div>;
+                            },
+                          }}
+                        />
+                      </div>
+                      <div class="drawer-form-group">
+                        <div className="drawer-label">Step Users :</div>
+                        <Select
+                          isMulti
+                          closeMenuOnSelect={false}
+                          hideSelectedOptions={false}
+                          options={[
+                            { label: "Select All", value: "__SELECT_ALL_USERS__" },
+                            ...stepUsersOptions.map(user => ({
+                              label: user.UserName,
+                              value: user.UserName,
+                            }))
+                          ]}
+                          value={
+                            (drawerNodeProperties.UserNames || []).map(userName => ({
+                              label: userName,
+                              value: userName,
+                            })) || []
                           }
-                          return (
-                            <div
-                              ref={innerRef}
-                              {...innerProps}
-                              className="multi-value-option"
-                              style={{
-                                backgroundColor: isFocused ? '#f0f0f0' : 'white',
-                              }}
-                            >
-                              <input
-                                type="checkbox"
-                                checked={isSelected}
-                                readOnly
-                                className="multi-value-checkbox"
-                              />
-                              <div>{children}</div>
-                            </div>
-                          );
-                        },
-                        MultiValue: ({ index, getValue, ...props }) => {
-                          const values = getValue();
-                          const maxToShow = 2;
-                          const length = values.length;
-                          if (index >= maxToShow) return null;
-                          if (index === 1 && length > maxToShow) {
-                            return (
-                              <>
-                                <div className="multi-value-container">{props.data.label}</div>
-                                <div className="count-number">+{length - maxToShow}</div>
-                              </>
-                            );
-                          }
-                          return <div className="multi-value-container">{props.data.label}</div>;
-                        },
-                      }}
-                    />
-                    </div>
-                    <div class="drawer-form-group">
-                    <div className="drawer-label">Step Users :</div>
-                    <Select
-                      isMulti
-                      closeMenuOnSelect={false}
-                      hideSelectedOptions={false}
-                      options={[
-                        { label: "Select All", value: "__SELECT_ALL_USERS__" },
-                        ...stepUsersOptions.map(user => ({
-                          label: user.UserName,
-                          value: user.UserName,
-                        }))
-                      ]}
-                      value={
-                        (drawerNodeProperties.UserNames || []).map(userName => ({
-                          label: userName,
-                          value: userName,
-                        })) || []
-                      }
-                      onChange={selected => {
-                        const hasSelectAll = selected?.some(item => item.value === "__SELECT_ALL_USERS__");
-                        const allUserNames = stepUsersOptions.map(user => user.UserName);
-                        const currentUserNames = drawerNodeProperties.UserNames || [];
-                        if (hasSelectAll) {
-                          const allSelected = allUserNames.every(name => currentUserNames.includes(name));
-                          setDrawerNodeProperties(prev => ({
-                            ...prev,
-                            UserNames: allSelected ? [] : allUserNames,
-                          }));
-                        } else {
-                          setDrawerNodeProperties(prev => ({
-                            ...prev,
-                            UserNames: selected ? selected.map(item => item.value) : [],
-                          }));
-                        }
-                      }}
-                      className="modal-select drawer-form-elements-height"
-                      classNamePrefix="modal-select"
-                      components={{
-                        Option: ({ children, ...props }) => {
-                          const { isSelected, isFocused, innerRef, innerProps, data } = props;
-                          if (data.value === "__SELECT_ALL_USERS__") {
+                          onChange={selected => {
+                            const hasSelectAll = selected?.some(item => item.value === "__SELECT_ALL_USERS__");
                             const allUserNames = stepUsersOptions.map(user => user.UserName);
                             const currentUserNames = drawerNodeProperties.UserNames || [];
-                            const allSelected = allUserNames.every(name => currentUserNames.includes(name));
-                            return (
-                              <div
-                                ref={innerRef}
-                                {...innerProps}
-                                className="multi-value-option"
-                                style={{
-                                  backgroundColor: isFocused ? '#f0f0f0' : 'white',
-                                  fontWeight: 'bold',
-                                  borderBottom: '1px solid #e5e5e5'
-                                }}
-                              >
-                                <input
-                                  type="checkbox"
-                                  checked={allSelected}
-                                  readOnly
-                                  className="multi-value-checkbox"
-                                />
-                                <div>{children}</div>
-                              </div>
-                            );
-                          }
-                          return (
-                            <div
-                              ref={innerRef}
-                              {...innerProps}
-                              className="multi-value-option"
-                              style={{
-                                backgroundColor: isFocused ? '#f0f0f0' : 'white',
-                              }}
-                            >
-                              <input
-                                type="checkbox"
-                                checked={isSelected}
-                                readOnly
-                                className="multi-value-checkbox"
-                              />
-                              <div>{children}</div>
-                            </div>
-                          );
-                        },
-                        MultiValue: ({ index, getValue, ...props }) => {
-                          const values = getValue();
-                          const maxToShow = 2;
-                          const length = values.length;
-                          if (index >= maxToShow) return null;
-                          if (index === 1 && length > maxToShow) {
-                            return (
-                              <>
-                                <div className="multi-value-container">{props.data.label}</div>
-                                <div className="count-number">+{length - maxToShow}</div>
-                              </>
-                            );
-                          }
-                          return <div className="multi-value-container">{props.data.label}</div>;
-                        },
-                      }}
-                    />
-                    </div>
-                    <div className="drawer-actions">
-                      
-                      <button onClick={() => setEditMode(false)} className="modal-button-cancel drawer-form-elements-height">Cancel</button>
-                      <button onClick={saveDrawerNodeProperties} className="modal-button-save drawer-form-elements-height" style={{ background: saveButtonColor }}>Save</button>
-                    </div>
-                  </>
-                )}
-              </div>
+                            if (hasSelectAll) {
+                              const allSelected = allUserNames.every(name => currentUserNames.includes(name));
+                              setDrawerNodeProperties(prev => ({
+                                ...prev,
+                                UserNames: allSelected ? [] : allUserNames,
+                              }));
+                            } else {
+                              setDrawerNodeProperties(prev => ({
+                                ...prev,
+                                UserNames: selected ? selected.map(item => item.value) : [],
+                              }));
+                            }
+                          }}
+                          className="modal-select drawer-form-elements-height"
+                          classNamePrefix="modal-select"
+                          components={{
+                            Option: ({ children, ...props }) => {
+                              const { isSelected, isFocused, innerRef, innerProps, data } = props;
+                              if (data.value === "__SELECT_ALL_USERS__") {
+                                const allUserNames = stepUsersOptions.map(user => user.UserName);
+                                const currentUserNames = drawerNodeProperties.UserNames || [];
+                                const allSelected = allUserNames.every(name => currentUserNames.includes(name));
+                                return (
+                                  <div
+                                    ref={innerRef}
+                                    {...innerProps}
+                                    className="multi-value-option"
+                                    style={{
+                                      backgroundColor: isFocused ? '#f0f0f0' : 'white',
+                                      fontWeight: 'bold',
+                                      borderBottom: '1px solid #e5e5e5'
+                                    }}
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={allSelected}
+                                      readOnly
+                                      className="multi-value-checkbox"
+                                    />
+                                    <div>{children}</div>
+                                  </div>
+                                );
+                              }
+                              return (
+                                <div
+                                  ref={innerRef}
+                                  {...innerProps}
+                                  className="multi-value-option"
+                                  style={{
+                                    backgroundColor: isFocused ? '#f0f0f0' : 'white',
+                                  }}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={isSelected}
+                                    readOnly
+                                    className="multi-value-checkbox"
+                                  />
+                                  <div>{children}</div>
+                                </div>
+                              );
+                            },
+                            MultiValue: ({ index, getValue, ...props }) => {
+                              const values = getValue();
+                              const maxToShow = 2;
+                              const length = values.length;
+                              if (index >= maxToShow) return null;
+                              if (index === 1 && length > maxToShow) {
+                                return (
+                                  <>
+                                    <div className="multi-value-container">{props.data.label}</div>
+                                    <div className="count-number">+{length - maxToShow}</div>
+                                  </>
+                                );
+                              }
+                              return <div className="multi-value-container">{props.data.label}</div>;
+                            },
+                          }}
+                        />
+                      </div>
+                      <div className="drawer-actions">
+                        <button onClick={() => setEditMode(false)} className="modal-button-cancel drawer-form-elements-height">Cancel</button>
+                        <button onClick={saveDrawerNodeProperties} className="modal-button-save drawer-form-elements-height" style={{ background: saveButtonColor }}>Save</button>
+                      </div>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
           )}
