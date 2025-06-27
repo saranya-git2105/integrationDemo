@@ -577,6 +577,27 @@ const WorkflowEditor = forwardRef(
             }));
             logger.info("👥 Loaded Step Users:", userOptions);
             setStepUsersOptions(userOptions);
+            // Clean up invalid users in current nodes
+            setNodes((prevNodes) =>
+              prevNodes.map((node) => {
+                const props = node.data?.properties || {};
+                const validUserNames = (props.UserNames || []).filter((name) =>
+                  userOptions.some((u) => u.UserName === name)
+                );
+
+                return {
+                  ...node,
+                  data: {
+                    ...node.data,
+                    properties: {
+                      ...props,
+                      UserNames: validUserNames
+                    }
+                  }
+                };
+              })
+            );
+
           } else {
             logger.warn("No user data received");
             setStepUsersOptions([]);
@@ -607,10 +628,10 @@ const WorkflowEditor = forwardRef(
             : [],
 
           UserNames: Array.isArray(props.UserNames)
-            ? props.UserNames.map((name) => {
-              const found = stepUsersOptions.find((u) => u.UserName === name);
-              return found?.UserName || name;
-            })
+            ? props.UserNames
+              .filter((name) =>
+                stepUsersOptions.some((u) => u.UserName === name)
+              )
             : [],
         });
       }
@@ -799,15 +820,15 @@ const WorkflowEditor = forwardRef(
           nds.map((n) =>
             n.id === drawerNode.id
               ? {
-                  ...n,
-                  data: {
-                    ...n.data,
-                    label: drawerNodeProperties.StepName || n.data.label,
-                    properties: {
-                      ...drawerNodeProperties,
-                    },
+                ...n,
+                data: {
+                  ...n.data,
+                  label: drawerNodeProperties.StepName || n.data.label,
+                  properties: {
+                    ...drawerNodeProperties,
                   },
-                }
+                },
+              }
               : n
           )
         );
@@ -1138,9 +1159,15 @@ const WorkflowEditor = forwardRef(
         ) || [];
 
         // Map user IDs to names
-        const UserNames = step.WorkFlowStepUser?.map(user =>
+        let userNamesRaw = step.WorkFlowStepUser?.map(user =>
           getUserNameFromId(user.UserId)
         ) || [];
+
+        // Filter out inactive users (not in master user list)
+        const validUserNames = userNamesRaw.filter(name =>
+          users.some(u => u.UserName === name)
+        );
+
 
         logger.info(`\n🏗️ Creating Node:`, {
           id: stepCode,
@@ -1148,7 +1175,7 @@ const WorkflowEditor = forwardRef(
           nodeShape,
           position,
           stepActions,
-          UserNames
+          UserNames: validUserNames
         });
 
         // Create node with proper properties
@@ -1166,7 +1193,7 @@ const WorkflowEditor = forwardRef(
               ShortPurposeForForward: step.Properties?.ShortPurposeForForward || "",
               NodeShape: nodeShape,
               StepActions: stepActions,
-              UserNames: UserNames
+              UserNames: validUserNames
             }
           }
         });
@@ -1783,13 +1810,13 @@ const WorkflowEditor = forwardRef(
         eds.map((edge) =>
           edge.id === selectedEdge.id
             ? {
-                ...edge,
-                label: actionName,
-                data: {
-                  ...edge.data,
-                  actionName: actionName,
-                },
-              }
+              ...edge,
+              label: actionName,
+              data: {
+                ...edge.data,
+                actionName: actionName,
+              },
+            }
             : edge
         )
       );
@@ -1867,18 +1894,18 @@ const WorkflowEditor = forwardRef(
 
             <div className="sidebar-controls">
               {/* Undo Button */}
-              <div 
-                className="control-button" 
-                onClick={handleUndo} 
+              <div
+                className="control-button"
+                onClick={handleUndo}
                 title="Undo (Ctrl+Z)"
                 style={{ opacity: undoStack.length > 0 ? 1 : 0.5 }}
               >
                 <FiRotateCcw size={12} color="#1e293b" />
               </div>
               {/* Redo Button */}
-              <div 
-                className="control-button" 
-                onClick={handleRedo} 
+              <div
+                className="control-button"
+                onClick={handleRedo}
                 title="Redo (Ctrl+Y)"
                 style={{ opacity: redoStack.length > 0 ? 1 : 0.5 }}
               >
@@ -1912,40 +1939,40 @@ const WorkflowEditor = forwardRef(
           </div>
 
           {/* Add template workflows */}
-         {config?.showTemplateWorkflow && (
+          {config?.showTemplateWorkflow && (
 
-          <div className="template-workflows-container">
-            <div className="desktop-only">
-              <p className="template-workflows-title">🎯 Dynamic Template</p>
+            <div className="template-workflows-container">
+              <div className="desktop-only">
+                <p className="template-workflows-title">🎯 Dynamic Template</p>
+              </div>
+              <div className="dynamic-template-controls">
+                <input
+                  type="number"
+                  min="1"
+                  max="10"
+                  value={nodeCount}
+                  onChange={(e) => setNodeCount(Math.min(10, Math.max(1, parseInt(e.target.value) || 1)))}
+                  className="node-counter-input"
+                />
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    // Force immediate execution
+                    Promise.resolve().then(() => {
+                      loadDynamicTemplate(e);
+                    });
+                  }}
+                  className="generate-template-button"
+                >
+                  Generate
+                </button>
+              </div>
+              <div className="dynamic-template-description">
+                Create a template with {nodeCount} step{nodeCount !== 1 ? 's' : ''}
+              </div>
             </div>
-            <div className="dynamic-template-controls">
-              <input
-                type="number"
-                min="1"
-                max="10"
-                value={nodeCount}
-                onChange={(e) => setNodeCount(Math.min(10, Math.max(1, parseInt(e.target.value) || 1)))}
-                className="node-counter-input"
-              />
-              <button
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  // Force immediate execution
-                  Promise.resolve().then(() => {
-                    loadDynamicTemplate(e);
-                  });
-                }}
-                className="generate-template-button"
-              >
-                Generate
-              </button>
-            </div>
-            <div className="dynamic-template-description">
-              Create a template with {nodeCount} step{nodeCount !== 1 ? 's' : ''}
-            </div>
-          </div>
-         )}
+          )}
           {/* Action Buttons */}
           {sidebarButtons.map(({ label, icon, action, color }) => (
             <button
@@ -1961,12 +1988,12 @@ const WorkflowEditor = forwardRef(
 
           <div class="editor-tips-section">
             <b>Editor Tips:</b>
-            <ul style={{margin: '6px 0 0 16px', padding: 0}}>
+            <ul style={{ margin: '6px 0 0 16px', padding: 0 }}>
               <li>Drag and drop nodes from <b>Node Types</b> to the canvas.</li>
               <li>From the Handles draw the edges to connect between the Nodes.</li>
               <li>Click a node to view or edit its properties.</li>
               <li>Right-click a node for more options (delete, duplicate, add connected node).</li>
-              
+
               <li>Undo/Redo with the ⟲/⟳ buttons or Ctrl+Z/Ctrl+Y.</li>
             </ul>
           </div>
