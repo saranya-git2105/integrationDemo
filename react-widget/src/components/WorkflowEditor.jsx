@@ -1540,20 +1540,34 @@ const WorkflowEditor = forwardRef(
             });
 
           // Map actions with preserved IDs
-          const WorkFlowStepAction = (props.StepActions || []).map((actionName) => {
-            const found = stepActionsOptions.find(
-              (a) => a.ActionName === actionName
-            );
-            // Find matching original action
-            const originalAction = originalStep?.WorkFlowStepAction?.find(a =>
-              a.ActionId === found?.ActionId
-            );
+          const WorkFlowStepAction = [
+            // Keep or update existing actions
+            ...(props.StepActions || []).map((actionName) => {
+              const found = stepActionsOptions.find(a => a.ActionName === actionName);
+              const originalAction = originalStep?.WorkFlowStepAction?.find(a =>
+                a.ActionId === found?.ActionId
+              );
 
-            return {
-              Id: originalAction?.Id || "",
-              ActionId: found?.ActionId || actionName || "Unknown",
-            };
-          });
+              return {
+                Id: originalAction?.Id || "",
+                ActionId: found?.ActionId || actionName || "Unknown",
+                Status: "Active"  // Optional, for clarity
+              };
+            }),
+
+            // Add removed actions with Status: 'Delete'
+            ...(originalStep?.WorkFlowStepAction || [])
+              .filter(orig => {
+                const action = stepActionsOptions.find(a => a.ActionId === orig.ActionId);
+                return action && !(props.StepActions || []).includes(action.ActionName);
+              })
+              .map((deletedAction) => ({
+                Id: deletedAction.Id,
+                ActionId: deletedAction.ActionId,
+                Status: "Delete"
+              }))
+          ];
+
 
           // Map users with preserved IDs
           const WorkFlowStepUser = (props.UserNames || []).map((userName) => {
