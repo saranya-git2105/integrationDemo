@@ -1518,26 +1518,49 @@ const WorkflowEditor = forwardRef(
               (act) => act.ActionName === actionName
             );
 
-          const WorkFlowStepTransition = outgoingEdges
-            .filter((edge) => stepCodeMap[edge.target] !== undefined)
-            .map((edge) => {
-              const action = resolveAction(edge.label);
-              const targetNode = nodesCopy.find(n => n.id === edge.target);
-              const targetStepCode = targetNode?.data?.properties?.StepCode || "step" + stepCodeMap[edge.target];
+          const WorkFlowStepTransition = [
+            // Current transitions
+            ...outgoingEdges
+              .filter((e) => stepCodeMap[e.target] !== undefined)
+              .map((edge) => {
+                const action = resolveAction(edge.label);
+                const targetNode = nodesCopy.find(n => n.id === edge.target);
+                const targetStepCode = targetNode?.data?.properties?.StepCode || "step" + stepCodeMap[edge.target];
 
-              // Find matching original transition
-              const originalTransition = originalStep?.WorkFlowStepTransition?.find(t =>
-                t.NextStepCode === targetStepCode
-              );
+                const originalTransition = originalStep?.WorkFlowStepTransition?.find(t =>
+                  t.NextStepCode === targetStepCode
+                );
 
-              return {
-                Id: originalTransition?.Id || "",
-                ActionId: action?.ActionId || "",
-                NextStepCode: targetStepCode,
-                FromHandleId: edge.sourceHandle || "",
-                ToHandleId: edge.targetHandle || "",
-              };
-            });
+                return {
+                  Id: originalTransition?.Id || "",
+                  ActionId: action?.ActionId || "",
+                  NextStepCode: targetStepCode,
+                  FromHandleId: edge.sourceHandle || "",
+                  ToHandleId: edge.targetHandle || "",
+                  Status: ""
+                };
+              }),
+
+            // Deleted transitions
+            ...(originalStep?.WorkFlowStepTransition || [])
+              .filter(orig => {
+                const stillExists = outgoingEdges.some(edge => {
+                  const targetNode = nodesCopy.find(n => n.id === edge.target);
+                  const targetStepCode = targetNode?.data?.properties?.StepCode || "step" + stepCodeMap[edge.target];
+                  return orig.NextStepCode === targetStepCode;
+                });
+                return !stillExists;
+              })
+              .map(deletedTransition => ({
+                Id: deletedTransition.Id,
+                ActionId: deletedTransition.ActionId,
+                NextStepCode: deletedTransition.NextStepCode,
+                FromHandleId: deletedTransition.FromHandleId || "",
+                ToHandleId: deletedTransition.ToHandleId || "",
+                Status: "Delete"
+              }))
+          ];
+
 
           // Map actions with preserved IDs
           const WorkFlowStepAction = [
@@ -1551,7 +1574,7 @@ const WorkflowEditor = forwardRef(
               return {
                 Id: originalAction?.Id || "",
                 ActionId: found?.ActionId || actionName || "Unknown",
-                Status: "Active"  // Optional, for clarity
+                Status: ""  // Optional, for clarity
               };
             }),
 
@@ -1570,20 +1593,34 @@ const WorkflowEditor = forwardRef(
 
 
           // Map users with preserved IDs
-          const WorkFlowStepUser = (props.UserNames || []).map((userName) => {
-            const found = stepUsersOptions.find(
-              (u) => u.UserName === userName
-            );
-            // Find matching original user
-            const originalUser = originalStep?.WorkFlowStepUser?.find(u =>
-              u.UserId === found?.UserId
-            );
+          const WorkFlowStepUser = [
+            // Current users
+            ...(props.UserNames || []).map((userName) => {
+              const found = stepUsersOptions.find(u => u.UserName === userName);
+              const originalUser = originalStep?.WorkFlowStepUser?.find(u =>
+                u.UserId === found?.UserId
+              );
 
-            return {
-              Id: originalUser?.Id || "",
-              UserId: found?.UserId || userName || "Unknown",
-            };
-          });
+              return {
+                Id: originalUser?.Id || "",
+                UserId: found?.UserId || userName || "Unknown",
+                Status: ""
+              };
+            }),
+
+            // Deleted users
+            ...(originalStep?.WorkFlowStepUser || [])
+              .filter(orig => {
+                const user = stepUsersOptions.find(u => u.UserId === orig.UserId);
+                return user && !(props.UserNames || []).includes(user.UserName);
+              })
+              .map(deletedUser => ({
+                Id: deletedUser.Id,
+                UserId: deletedUser.UserId,
+                Status: "Delete"
+              }))
+          ];
+
 
           return {
             Id: originalStep?.Id || "",
