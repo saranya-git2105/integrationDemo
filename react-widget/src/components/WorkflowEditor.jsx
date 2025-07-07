@@ -1557,7 +1557,7 @@ const WorkflowEditor = forwardRef(
                 NextStepCode: deletedTransition.NextStepCode,
                 FromHandleId: deletedTransition.FromHandleId || "",
                 ToHandleId: deletedTransition.ToHandleId || "",
-                Status: "Delete"
+                Status: "delete"
               }))
           ];
 
@@ -1587,7 +1587,7 @@ const WorkflowEditor = forwardRef(
               .map((deletedAction) => ({
                 Id: deletedAction.Id,
                 ActionId: deletedAction.ActionId,
-                Status: "Delete"
+                Status: "delete"
               }))
           ];
 
@@ -1617,7 +1617,7 @@ const WorkflowEditor = forwardRef(
               .map(deletedUser => ({
                 Id: deletedUser.Id,
                 UserId: deletedUser.UserId,
-                Status: "Delete"
+                Status: "delete"
               }))
           ];
 
